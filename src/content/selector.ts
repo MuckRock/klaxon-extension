@@ -11,13 +11,8 @@ export function selectorForElement(el: Element): string {
  * deepest (most specific) segment — the one callers actually need.
  */
 export function deepestSelector(el: Element): string {
-	let current: Element | null = el;
-	let last = '';
-	while (current && current.nodeName.toLowerCase() !== 'body') {
-		last = selectorForElement(current);
-		current = current.parentElement;
-	}
-	return last;
+	if (el.nodeName.toLowerCase() === 'body') return '';
+	return selectorForElement(el);
 }
 
 /** Resolve the element under the cursor, ignoring a given host container. */

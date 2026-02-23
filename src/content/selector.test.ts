@@ -28,14 +28,44 @@ describe('selectorForElement', () => {
 });
 
 describe('deepestSelector', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
 	it('returns empty string for body element', () => {
 		expect(deepestSelector(document.body)).toBe('');
 	});
 
-	it('returns selector for a normal element', () => {
+	it('returns selector for a direct child of body', () => {
 		const el = document.createElement('div');
 		el.id = 'app';
+		document.body.appendChild(el);
 		expect(deepestSelector(el)).toBe('div#app');
+	});
+
+	it('returns the deepest element selector, not an ancestor', () => {
+		const wrapper = document.createElement('div');
+		wrapper.id = 'wrapper';
+		const inner = document.createElement('span');
+		inner.className = 'text';
+		wrapper.appendChild(inner);
+		document.body.appendChild(wrapper);
+
+		expect(deepestSelector(inner)).toBe('span.text');
+	});
+
+	it('returns the deepest element in a three-level hierarchy', () => {
+		const a = document.createElement('section');
+		a.id = 'top';
+		const b = document.createElement('article');
+		b.className = 'mid';
+		const c = document.createElement('p');
+		c.id = 'leaf';
+		a.appendChild(b);
+		b.appendChild(c);
+		document.body.appendChild(a);
+
+		expect(deepestSelector(c)).toBe('p#leaf');
 	});
 });
 
