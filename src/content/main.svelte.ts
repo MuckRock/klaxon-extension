@@ -1,11 +1,19 @@
 import Sidebar from './Sidebar.svelte';
 import { mount, unmount } from 'svelte';
+import { getCanonicalURL } from './url';
+import { resolveTarget } from './selector';
 
 declare global {
 	interface Window {
 		_klaxonInject?: boolean;
 	}
 }
+
+const HOVER_COLOR = 'rgba(255, 11, 58, 0.3)';
+const SAVED_COLOR = 'rgba(58, 255, 11, 0.3)';
+const SIDEBAR_WIDTH = '300px';
+const HOST_ID = 'klaxon-host';
+const STYLE_ID = 'klaxon-css-inject';
 
 (function () {
 	if (window._klaxonInject === true) {
@@ -15,66 +23,37 @@ declare global {
 	window._klaxonInject = true;
 	console.log('[klaxon booted]');
 
-	// Create shadow DOM container for style isolation
-	const host = document.createElement('div');
-	host.id = 'klaxon-host';
-	document.body.appendChild(host);
-	const shadow = host.attachShadow({ mode: 'open' });
+	// --- DOM scaffolding ---
 
-	// Create a mount point inside the shadow root
+	const host = document.createElement('div');
+	host.id = HOST_ID;
+	document.body.appendChild(host);
+
+	const shadow = host.attachShadow({ mode: 'open' });
 	const mountPoint = document.createElement('div');
 	shadow.appendChild(mountPoint);
 
-	// Shrink the page to make room for the sidebar
 	const prevMarginRight = document.body.style.marginRight;
-	document.body.style.marginRight = '300px';
+	document.body.style.marginRight = SIDEBAR_WIDTH;
 
-	// Inject a highlight stylesheet into the main document (not shadow DOM,
-	// since we need to style elements on the host page)
 	const highlightStyles = document.createElement('style');
-	highlightStyles.id = 'klaxon-css-inject';
+	highlightStyles.id = STYLE_ID;
 	document.head.appendChild(highlightStyles);
 
-	function getCanonicalURL(): string {
-		try {
-			const og = document.querySelector("meta[property='og:url']")?.getAttribute('content');
-			if (og) return og;
-		} catch (_) {
-			/* ignore */
-		}
-		try {
-			const linkRel = document.querySelector("link[rel='canonical']")?.getAttribute('href');
-			if (linkRel) return linkRel;
-		} catch (_) {
-			/* ignore */
-		}
-		return window.location.href;
-	}
-
-	function cssPath(el: Element): string[] {
-		const path: string[] = [];
-		let current: Element | null = el;
-		while (current && current.nodeName.toLowerCase() !== 'body') {
-			const name = current.nodeName.toLowerCase();
-			const id = current.id ? '#' + current.id : '';
-			const cls = current.className ? '.' + current.className.replace(/\s+/g, '.') : '';
-			path.unshift(name + id + cls);
-			current = current.parentElement;
-		}
-		return path;
-	}
+	// --- Highlight styling ---
 
 	let savedSelector = '';
 
 	function updateHighlight(selector: string) {
-		let css = selector + ' { background-color: rgba(255, 11, 58, 0.3); }\n';
+		let css = selector + ' { background-color: ' + HOVER_COLOR + '; }\n';
 		if (savedSelector) {
-			css += savedSelector + ' { background-color: rgba(58, 255, 11, 0.3); }\n';
+			css += savedSelector + ' { background-color: ' + SAVED_COLOR + '; }\n';
 		}
 		highlightStyles.innerHTML = css;
 	}
 
-	// State passed to the Svelte component
+	// --- Reactive state & Svelte mount ---
+
 	let currentSelector = $state('');
 	let currentMatchText = $state('');
 
@@ -92,35 +71,32 @@ declare global {
 		}
 	});
 
+	// --- Event handlers ---
+
 	function onMouseMove(evt: MouseEvent) {
 		if (!window._klaxonInject) return;
-		const el = document.elementFromPoint(evt.clientX, evt.clientY);
-		if (!el || host.contains(el)) return;
-		const path = cssPath(el);
-		const selector = path[path.length - 1];
-		if (selector) {
-			currentSelector = selector;
-			const matched = document.querySelector(selector);
-			currentMatchText = matched?.textContent?.trim().slice(0, 200) ?? '';
-			updateHighlight(selector);
-		}
+		const target = resolveTarget(evt, host);
+		if (!target) return;
+		currentSelector = target.selector;
+		currentMatchText = target.matchText;
+		updateHighlight(target.selector);
 	}
 
 	function onClick(evt: MouseEvent) {
 		if (!window._klaxonInject) return;
 		evt.preventDefault();
-		const el = document.elementFromPoint(evt.clientX, evt.clientY);
-		if (!el || host.contains(el)) return;
-		const path = cssPath(el);
-		savedSelector = path[path.length - 1] ?? '';
-		currentSelector = savedSelector;
-		const matched = document.querySelector(savedSelector);
-		currentMatchText = matched?.textContent?.trim().slice(0, 200) ?? '';
-		updateHighlight(savedSelector);
+		const target = resolveTarget(evt, host);
+		if (!target) return;
+		savedSelector = target.selector;
+		currentSelector = target.selector;
+		currentMatchText = target.matchText;
+		updateHighlight(target.selector);
 	}
 
 	window.addEventListener('mousemove', onMouseMove);
 	window.addEventListener('click', onClick);
+
+	// --- Teardown ---
 
 	function cleanup() {
 		window.removeEventListener('mousemove', onMouseMove);
