@@ -4,6 +4,7 @@ import {
 	resolveSelectionRect,
 	rankByOverlap,
 	dominantSelectors,
+	commonSelector,
 	collectVisibleElements
 } from './geometry';
 
@@ -113,6 +114,7 @@ describe('rankByOverlap', () => {
 		expect(result).toHaveLength(1);
 		expect(result[0].el).toBe(el);
 		expect(result[0].area).toBe(400);
+		expect(result[0].coverage).toBe(1); // fully covered
 	});
 
 	it('sorts elements descending by overlap area', () => {
@@ -142,6 +144,39 @@ describe('rankByOverlap', () => {
 		expect(result).toHaveLength(2);
 		expect(result[0].area).toBe(100);
 		expect(result[1].area).toBe(100);
+	});
+
+	it('filters out elements where selection covers less than 25% of element area', () => {
+		const hero = document.createElement('img');
+		const bg = document.createElement('div');
+		// Selection is 100x100 at origin
+		// hero is 80x80 fully inside selection → coverage = 100%
+		// bg is 1000x1000 starting at origin → overlap = 100x100=10000, coverage = 10000/1000000 = 1%
+		const elements = [
+			{ el: hero, rect: { x: 10, y: 10, width: 80, height: 80 } },
+			{ el: bg, rect: { x: 0, y: 0, width: 1000, height: 1000 } }
+		];
+		const selection = { x: 0, y: 0, width: 100, height: 100 };
+		const result = rankByOverlap(elements, selection);
+		expect(result.map((r) => r.el)).toEqual([hero]);
+	});
+
+	it('keeps partially-covered elements above the 25% coverage threshold', () => {
+		const el = document.createElement('div');
+		// Element is 100x100, selection covers 60x100 of it → coverage = 60%
+		const elements = [{ el, rect: { x: 0, y: 0, width: 100, height: 100 } }];
+		const selection = { x: 40, y: 0, width: 200, height: 100 };
+		const result = rankByOverlap(elements, selection);
+		expect(result).toHaveLength(1);
+		expect(result[0].coverage).toBe(0.6);
+	});
+
+	it('filters out zero-area elements gracefully', () => {
+		const el = document.createElement('div');
+		const elements = [{ el, rect: { x: 0, y: 0, width: 0, height: 0 } }];
+		const selection = { x: 0, y: 0, width: 100, height: 100 };
+		const result = rankByOverlap(elements, selection);
+		expect(result).toEqual([]);
 	});
 });
 
@@ -181,14 +216,14 @@ describe('dominantSelectors', () => {
 		expect(dominantSelectors(ranked, 10000)).toBe('p#big');
 	});
 
-	it('caps at 5 selectors', () => {
+	it('returns all elements above threshold without a cap', () => {
 		const elements = Array.from({ length: 7 }, (_, i) => {
 			const el = document.createElement('div');
 			el.id = `el${i}`;
 			return { el, area: 2000 };
 		});
 		const result = dominantSelectors(elements, 10000);
-		expect(result.split(', ')).toHaveLength(5);
+		expect(result.split(', ')).toHaveLength(7);
 	});
 
 	it('returns empty string when selection area is zero', () => {
@@ -196,6 +231,71 @@ describe('dominantSelectors', () => {
 		el.id = 'test';
 		const ranked = [{ el, area: 100 }];
 		expect(dominantSelectors(ranked, 0)).toBe('');
+	});
+});
+
+describe('commonSelector', () => {
+	it('returns empty string for empty array', () => {
+		expect(commonSelector([])).toBe('');
+	});
+
+	it('returns full selector for a single element', () => {
+		const el = document.createElement('div');
+		el.id = 'solo';
+		el.className = 'card';
+		expect(commonSelector([el])).toBe('div#solo.card');
+	});
+
+	it('returns shared tag when all elements have the same tag', () => {
+		const a = document.createElement('div');
+		a.id = 'a';
+		const b = document.createElement('div');
+		b.id = 'b';
+		expect(commonSelector([a, b])).toBe('div');
+	});
+
+	it('returns shared tag and classes, dropping non-shared classes', () => {
+		const a = document.createElement('div');
+		a.className = 'card featured';
+		const b = document.createElement('div');
+		b.className = 'card highlight';
+		expect(commonSelector([a, b])).toBe('div.card');
+	});
+
+	it('returns only shared classes when tags differ', () => {
+		const a = document.createElement('div');
+		a.className = 'item active';
+		const b = document.createElement('span');
+		b.className = 'item active';
+		expect(commonSelector([a, b])).toBe('.item.active');
+	});
+
+	it('returns empty string when elements share nothing', () => {
+		const a = document.createElement('div');
+		a.className = 'foo';
+		const b = document.createElement('span');
+		b.className = 'bar';
+		expect(commonSelector([a, b])).toBe('');
+	});
+
+	it('ignores id since ids are unique per element', () => {
+		const a = document.createElement('div');
+		a.id = 'one';
+		a.className = 'shared';
+		const b = document.createElement('div');
+		b.id = 'two';
+		b.className = 'shared';
+		expect(commonSelector([a, b])).toBe('div.shared');
+	});
+
+	it('works across three elements with partial class overlap', () => {
+		const a = document.createElement('p');
+		a.className = 'text bold large';
+		const b = document.createElement('p');
+		b.className = 'text bold small';
+		const c = document.createElement('p');
+		c.className = 'text italic bold';
+		expect(commonSelector([a, b, c])).toBe('p.text.bold');
 	});
 });
 

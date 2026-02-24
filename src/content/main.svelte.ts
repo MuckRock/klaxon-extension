@@ -65,7 +65,8 @@ const MIN_DRAG_PX = 5;
 	let dragStartY = 0;
 
 	function updateHighlight(selector: string) {
-		let css = selector + ' { background-color: ' + HOVER_COLOR + '; }\n';
+		let css = 'body { cursor: crosshair !important; }\n';
+		css += selector + ' { background-color: ' + HOVER_COLOR + '; }\n';
 		if (savedSelector) {
 			css += savedSelector + ' { background-color: ' + SAVED_COLOR + '; }\n';
 		}
@@ -113,9 +114,11 @@ const MIN_DRAG_PX = 5;
 	function onMouseDown(evt: MouseEvent) {
 		if (!window._klaxonInject) return;
 		if (host.contains(evt.target as Node)) return;
+		evt.preventDefault();
 		isDragging = true;
 		dragStartX = evt.clientX;
 		dragStartY = evt.clientY;
+		document.body.style.userSelect = 'none';
 		dragOverlay.style.display = 'block';
 		dragOverlay.style.left = evt.clientX + 'px';
 		dragOverlay.style.top = evt.clientY + 'px';
@@ -127,6 +130,7 @@ const MIN_DRAG_PX = 5;
 		if (!isDragging) return;
 		isDragging = false;
 		dragOverlay.style.display = 'none';
+		document.body.style.userSelect = '';
 
 		const sel = resolveSelectionRect(dragStartX, dragStartY, evt.clientX, evt.clientY);
 		if (sel.width < MIN_DRAG_PX && sel.height < MIN_DRAG_PX) return;

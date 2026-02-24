@@ -1,5 +1,11 @@
 import { selectorForElement } from './selector';
 
+/** Minimum fraction of an element's own area that must be covered by the selection. */
+export const MIN_COVERAGE = 0.25;
+
+/** Minimum fraction of the selection area an element must occupy to be "dominant". */
+export const MIN_DOMINANCE = 0.1;
+
 export interface Rect {
 	x: number;
 	y: number;
@@ -35,32 +41,62 @@ export function resolveSelectionRect(
 	};
 }
 
-/** Sort elements descending by overlap area, filtering out zero-overlap. */
+/**
+ * Sort elements descending by overlap area, filtering out zero-overlap
+ * and elements where the selection covers less than 25% of the element's
+ * own area (avoids selecting large backgrounds behind the target).
+ */
 export function rankByOverlap(
 	elements: { el: Element; rect: Rect }[],
 	selection: Rect
-): { el: Element; area: number }[] {
+): { el: Element; area: number; coverage: number }[] {
 	return elements
-		.map(({ el, rect }) => ({ el, area: intersectionArea(rect, selection) }))
-		.filter(({ area }) => area > 0)
+		.map(({ el, rect }) => {
+			const area = intersectionArea(rect, selection);
+			const elArea = rect.width * rect.height;
+			const coverage = elArea > 0 ? area / elArea : 0;
+			return { el, area, coverage };
+		})
+		.filter(({ area, coverage }) => area > 0 && coverage >= MIN_COVERAGE)
 		.sort((a, b) => b.area - a.area);
 }
 
 /**
  * Comma-joined CSS selectors for elements whose overlap is ≥10% of the
- * selection area. Capped at 5 selectors.
+ * selection area.
  */
 export function dominantSelectors(
 	ranked: { el: Element; area: number }[],
 	selectionArea: number
 ): string {
 	if (selectionArea === 0) return '';
-	const threshold = selectionArea * 0.1;
+	const threshold = selectionArea * MIN_DOMINANCE;
 	return ranked
 		.filter(({ area }) => area >= threshold)
-		.slice(0, 5)
 		.map(({ el }) => selectorForElement(el))
 		.join(', ');
+}
+
+/**
+ * Find the CSS selector components shared by all elements — common tag
+ * (if unanimous) and common classes. IDs are ignored since they're unique.
+ */
+export function commonSelector(elements: Element[]): string {
+	if (elements.length === 0) return '';
+	if (elements.length === 1) return selectorForElement(elements[0]);
+
+	const tags = elements.map((el) => el.nodeName.toLowerCase());
+	const sharedTag = tags.every((t) => t === tags[0]) ? tags[0] : '';
+
+	const classSets = elements.map((el) =>
+		el.className ? new Set(el.className.trim().split(/\s+/)) : new Set<string>()
+	);
+	const sharedClasses = [...classSets[0]].filter((cls) =>
+		classSets.every((s) => s.has(cls))
+	);
+
+	const clsPart = sharedClasses.length > 0 ? '.' + sharedClasses.join('.') : '';
+	return sharedTag + clsPart;
 }
 
 /** All elements under root excluding the host subtree, each with its bounding rect. */
