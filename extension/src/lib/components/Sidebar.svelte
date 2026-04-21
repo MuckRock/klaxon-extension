@@ -1,12 +1,41 @@
 <script lang="ts">
+  import { setContext } from "svelte";
+  import Debug from "./Debug.svelte";
+  import CreateAlert from "./CreateAlert.svelte";
+  import SaveAlert from "./SaveAlert.svelte";
+
+  export type View = "debug" | "createAlert" | "saveAlert";
+  export type WatchMode = "page" | "selection";
+
   interface Props {
     selector: string;
     matchText: string;
     url: string;
+    locked: boolean;
+    onclearselection: () => void;
     onclose: () => void;
   }
 
-  let { selector, matchText, url, onclose }: Props = $props();
+  let { selector, matchText, url, locked, onclearselection, onclose }: Props =
+    $props();
+
+  let currentView = $state<View>("createAlert");
+  let watchMode = $state<WatchMode>("page");
+
+  setContext("navigation", {
+    get view() {
+      return currentView;
+    },
+    navigate(v: View, opts?: { watchMode?: WatchMode }) {
+      currentView = v;
+      if (opts?.watchMode) {
+        watchMode = opts.watchMode;
+        if (opts.watchMode === "page") {
+          onclearselection();
+        }
+      }
+    },
+  });
 </script>
 
 <div class="sidebar">
@@ -16,24 +45,13 @@
   </div>
 
   <div class="body">
-    <label>
-      Page URL
-      <input type="text" readonly value={url} />
-    </label>
-
-    <label>
-      CSS Selector
-      <input type="text" readonly value={selector} />
-    </label>
-
-    {#if matchText}
-      <div class="match-text">
-        <strong>Matched text:</strong>
-        <p>{matchText}</p>
-      </div>
+    {#if currentView === "debug"}
+      <Debug {selector} {matchText} {url} />
+    {:else if currentView === "createAlert"}
+      <CreateAlert {locked} {selector} {matchText} />
+    {:else if currentView === "saveAlert"}
+      <SaveAlert {selector} {matchText} {url} {watchMode} />
     {/if}
-
-    <p class="hint">Click an element or drag to select a region.</p>
   </div>
 </div>
 
@@ -89,52 +107,5 @@
     padding: 16px;
     overflow-y: auto;
     flex: 1;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 12px;
-    font-weight: 500;
-    font-size: 12px;
-    color: #666;
-  }
-
-  input {
-    display: block;
-    width: 100%;
-    margin-top: 4px;
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: monospace;
-    background: #f9f9f9;
-    box-sizing: border-box;
-  }
-
-  .match-text {
-    margin-bottom: 12px;
-  }
-
-  .match-text strong {
-    font-size: 12px;
-    color: #666;
-  }
-
-  .match-text p {
-    margin: 4px 0 0;
-    padding: 8px;
-    background: #f0f7ff;
-    border-radius: 4px;
-    font-size: 13px;
-    line-height: 1.4;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .hint {
-    color: #999;
-    font-size: 12px;
-    font-style: italic;
   }
 </style>

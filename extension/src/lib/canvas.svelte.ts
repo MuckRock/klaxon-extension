@@ -2,7 +2,7 @@ import {
   resolveTarget,
   resolveEnclosingElement,
   type StructuredSelector,
-} from "../content/selector";
+} from "./selector";
 
 export interface CanvasState {
   readonly mouse: { x: number; y: number };
@@ -15,6 +15,7 @@ export interface CanvasState {
 
 export interface Canvas {
   readonly state: CanvasState;
+  clearSelection(): void;
   destroy(): void;
 }
 
@@ -26,7 +27,11 @@ function clipPathCutout(el: Element): string {
 
 const DRAG_THRESHOLD = 5;
 
-export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
+export function initCanvas(
+  host: HTMLElement,
+  shadow: ShadowRoot,
+  sidebarWidth: number,
+): Canvas {
   let mouse = $state({ x: 0, y: 0 });
   let selector = $state("");
   let matchText = $state("");
@@ -56,6 +61,17 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
   selectionDiv.style.cssText =
     "position:fixed; pointer-events:none; z-index:2147483646; display:none; box-sizing:border-box; border-radius:0.375rem; outline:4px solid #1EBE38; outline-offset:0;";
 
+  const dismissBtn = document.createElement("button");
+  dismissBtn.setAttribute("aria-label", "Clear selection");
+  dismissBtn.textContent = "\u00d7";
+  dismissBtn.style.cssText =
+    "position:fixed; pointer-events:auto; z-index:2147483647; display:none; box-sizing:border-box; width:28px; height:28px; border-radius:50%; border:2px solid #1EBE38; background:#1EBE38; color:#fff; font-size:24px; line-height:1; cursor:pointer; padding:0; text-align:center;";
+  dismissBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    clearSelection();
+  });
+
   const dragDiv = document.createElement("div");
   dragDiv.style.cssText =
     "position:fixed; pointer-events:none; z-index:2147483645; display:none; box-sizing:border-box; border:2px dashed rgba(39,198,162,0.8); background:rgba(39,198,162,0.08);";
@@ -63,6 +79,7 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
   shadow.appendChild(dimming);
   shadow.appendChild(hoverDiv);
   shadow.appendChild(selectionDiv);
+  shadow.appendChild(dismissBtn);
   shadow.appendChild(dragDiv);
 
   // ── Overlay helpers ──────────────────────────────────────────────────────
@@ -76,10 +93,31 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
     div.style.display = "block";
   }
 
+  const EDGE_PAD = 4;
+  const BTN_SIZE = 24;
+  const BTN_OFFSET = 8; // how far from the selection corner the button sits
+
   function showSelection(el: Element) {
     positionAt(selectionDiv, el);
     dimming.style.clipPath = clipPathCutout(el);
     dimming.style.display = "block";
+
+    // Position dismiss button at top-right of selection, clamped to viewport
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let btnLeft = rect.right - BTN_OFFSET;
+    let btnTop = rect.top - BTN_SIZE + BTN_OFFSET;
+
+    // Clamp to keep at least EDGE_PAD from each viewport edge and the sidebar
+    const rightEdge = vw - sidebarWidth;
+    btnLeft = Math.max(EDGE_PAD, Math.min(btnLeft, rightEdge - BTN_SIZE - EDGE_PAD));
+    btnTop = Math.max(EDGE_PAD, Math.min(btnTop, vh - BTN_SIZE - EDGE_PAD));
+
+    dismissBtn.style.left = `${btnLeft}px`;
+    dismissBtn.style.top = `${btnTop}px`;
+    dismissBtn.style.display = "block";
   }
 
   function hideHover() {
@@ -90,12 +128,22 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
   function hideSelection() {
     selectionDiv.style.display = "none";
     dimming.style.display = "none";
+    dismissBtn.style.display = "none";
     selectionEl = null;
   }
 
   function hideDrag() {
     dragDiv.style.display = "none";
     dragging = false;
+  }
+
+  function clearSelection() {
+    hideHover();
+    hideSelection();
+    selector = "";
+    matchText = "";
+    structured = undefined;
+    locked = false;
   }
 
   /** Build a DOMRect from the mousedown origin to the current mouse position. */
@@ -109,9 +157,16 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
 
   // ── Event handlers ───────────────────────────────────────────────────────
 
-  function onMouseDown(evt: MouseEvent) {
-    if (locked) return;
+  function onClick(evt: MouseEvent) {
     if (host.contains(evt.target as Node)) return;
+    evt.preventDefault();
+    evt.stopPropagation();
+  }
+
+  function onMouseDown(evt: MouseEvent) {
+    if (host.contains(evt.target as Node)) return;
+    evt.preventDefault();
+    if (locked) return;
     mouseDownPos = { x: evt.clientX, y: evt.clientY };
   }
 
@@ -196,16 +251,6 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
       }
 
       mouseDownPos = null;
-
-      // Suppress the click event that follows mouseup after a drag
-      window.addEventListener(
-        "click",
-        (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        },
-        { capture: true, once: true },
-      );
       return;
     }
 
@@ -244,6 +289,7 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
 
   // ── Listeners ────────────────────────────────────────────────────────────
 
+  window.addEventListener("click", onClick, true);
   window.addEventListener("mousedown", onMouseDown, true);
   window.addEventListener("mousemove", onMouseMove);
   window.addEventListener("mouseup", onMouseUp, true);
@@ -273,7 +319,9 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
         },
       };
     },
+    clearSelection,
     destroy() {
+      window.removeEventListener("click", onClick, true);
       window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp, true);
@@ -283,6 +331,7 @@ export function initCanvas(host: HTMLElement, shadow: ShadowRoot): Canvas {
       dimming.remove();
       hoverDiv.remove();
       selectionDiv.remove();
+      dismissBtn.remove();
       dragDiv.remove();
     },
   };

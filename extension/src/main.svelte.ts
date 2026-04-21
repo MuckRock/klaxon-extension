@@ -1,7 +1,7 @@
-import Sidebar from "./Sidebar.svelte";
 import { mount, unmount } from "svelte";
-import { getCanonicalURL } from "./url";
-import { initCanvas } from "../lib/canvas.svelte.ts";
+import { getCanonicalURL } from "./lib/url";
+import { initCanvas } from "./lib/canvas.svelte.ts"
+import Sidebar from "./lib/components/Sidebar.svelte"
 
 declare global {
   interface Window {
@@ -35,7 +35,7 @@ const HOST_ID = "klaxon-host";
 
   // --- Canvas & Svelte mount ---
 
-  const canvas = initCanvas(host, shadow);
+  const canvas = initCanvas(host, shadow, parseInt(SIDEBAR_WIDTH));
 
   const sidebar = mount(Sidebar, {
     target: mountPoint,
@@ -46,7 +46,11 @@ const HOST_ID = "klaxon-host";
       get matchText() {
         return canvas.state.matchText;
       },
+      get locked() {
+        return canvas.state.locked;
+      },
       url: getCanonicalURL(),
+      onclearselection: () => canvas.clearSelection(),
       onclose: cleanup,
     },
   });
