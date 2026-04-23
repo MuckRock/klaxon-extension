@@ -1,6 +1,6 @@
 import { mount, unmount } from "svelte";
 import App from "./lib/components/App.svelte";
-import { login } from "./lib/auth.svelte.ts";
+import { restore } from "./lib/auth.svelte.ts";
 
 declare global {
   interface Window {
@@ -34,7 +34,9 @@ const HOST_ID = "klaxon-host";
 
   // --- Svelte mount ---
   // --- auth ---
-  login();
+  // Seed authState from whatever the SW has stored. Sidebar reacts when it
+  // resolves.
+  restore().catch((err) => console.debug("[klaxon auth/restore]", err));
 
   // --- Canvas & Svelte mount ---
 

@@ -12,7 +12,7 @@
     "moduleResolution": "bundler",
     "module": "ESNext",
     "target": "ESNext",
-    "types": ["vite/client"]
+    "types": ["vite/client", "chrome"]
   },
   "include": ["src/**/*"]
 }
