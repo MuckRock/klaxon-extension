@@ -1,7 +1,7 @@
 <script lang="ts">
   import { slide } from "svelte/transition";
   import { flip } from "svelte/animate";
-  import { CircleAlert, CircleCheck, CircleStop, X } from "@lucide/svelte";
+  import { CircleAlert, CircleCheck, X } from "@lucide/svelte";
   import { getToaster } from "./Toaster.svelte";
 
   const toaster = getToaster();

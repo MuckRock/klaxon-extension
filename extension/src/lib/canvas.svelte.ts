@@ -52,13 +52,29 @@ export function initCanvas(
 
   const prevUserSelect = document.body.style.userSelect;
 
+  function addInteractionListeners() {
+    window.addEventListener("click", onClick, true);
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp, true);
+  }
+
+  function removeInteractionListeners() {
+    window.removeEventListener("click", onClick, true);
+    window.removeEventListener("mousedown", onMouseDown, true);
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp, true);
+  }
+
   function setActive(v: boolean) {
     if (v === active) return;
     active = v;
     if (active) {
       document.body.style.userSelect = "none";
+      addInteractionListeners();
     } else {
       document.body.style.userSelect = prevUserSelect;
+      removeInteractionListeners();
     }
   }
 
@@ -207,14 +223,12 @@ export function initCanvas(
   // ── Event handlers ───────────────────────────────────────────────────────
 
   function onClick(evt: MouseEvent) {
-    if (!active) return;
     if (host.contains(evt.target as Node)) return;
     evt.preventDefault();
     evt.stopPropagation();
   }
 
   function onMouseDown(evt: MouseEvent) {
-    if (!active) return;
     if (host.contains(evt.target as Node)) return;
     evt.preventDefault();
     if (locked) return;
@@ -222,7 +236,6 @@ export function initCanvas(
   }
 
   function onMouseMove(evt: MouseEvent) {
-    if (!active) return;
     mouse = { x: evt.clientX, y: evt.clientY };
 
     // If mouse is down, check for drag
@@ -275,7 +288,6 @@ export function initCanvas(
   }
 
   function onMouseUp(evt: MouseEvent) {
-    if (!active) return;
     if (!mouseDownPos) return;
 
     if (host.contains(evt.target as Node)) {
@@ -345,10 +357,6 @@ export function initCanvas(
 
   // ── Listeners ────────────────────────────────────────────────────────────
 
-  window.addEventListener("click", onClick, true);
-  window.addEventListener("mousedown", onMouseDown, true);
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp, true);
   window.addEventListener("scroll", onScrollOrResize, true);
   window.addEventListener("resize", onScrollOrResize);
 
@@ -395,10 +403,7 @@ export function initCanvas(
       return el;
     },
     destroy() {
-      window.removeEventListener("click", onClick, true);
-      window.removeEventListener("mousedown", onMouseDown, true);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp, true);
+      removeInteractionListeners();
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
       document.body.style.userSelect = prevUserSelect;

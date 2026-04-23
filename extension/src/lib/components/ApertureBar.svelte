@@ -37,10 +37,11 @@
   });
 
   // Reposition on resize
+  let barEl = $state<HTMLElement | null>(null);
   let left = $state(16);
 
   function reposition() {
-    const barWidth = 444;
+    const barWidth = barEl?.offsetWidth ?? 444;
     const availableWidth = window.innerWidth - sidebarWidth;
     left = Math.max(16, (availableWidth - barWidth) / 2);
   }
@@ -80,6 +81,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="aperture-bar"
+    bind:this={barEl}
     style:left="{left}px"
     onmousedown={stopPropagation}
     onclick={stopPropagation}
