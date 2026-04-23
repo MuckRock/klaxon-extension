@@ -1,11 +1,7 @@
 <script module>
   // To add a new view to the router,
   // register it within the View type.
-  type View = (
-    "home" |
-    "createAlert" |
-    "saveAlert"
-  );
+  type View = "home" | "createAlert" | "saveAlert";
 
   interface Router {
     view: View;
@@ -26,15 +22,9 @@
     children: Snippet<[Router]>;
   }
 
-  let {
-    initialView,
-    onchange,
-    children
-  }: Props = $props();
+  let { initialView, onchange, children }: Props = $props();
 
-  let currentView = $state<View>(
-    untrack(() => initialView)
-  );
+  let currentView = $state<View>(untrack(() => initialView));
 
   const router: Router = {
     get view() {

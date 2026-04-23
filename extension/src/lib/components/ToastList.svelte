@@ -17,9 +17,9 @@
     >
       <span class="toast-icon">
         {#if toast.type === "success"}
-        <CircleCheck size={20} strokeWidth={2} />
+          <CircleCheck size={20} strokeWidth={2} />
         {:else}
-        <CircleAlert size={20} strokeWidth={2} />
+          <CircleAlert size={20} strokeWidth={2} />
         {/if}
       </span>
       <span class="toast-message">{toast.message}</span>
@@ -75,7 +75,7 @@
   }
 
   .toast-error .toast-icon {
-    color: #E1275F;
+    color: #e1275f;
   }
 
   .toast-message {

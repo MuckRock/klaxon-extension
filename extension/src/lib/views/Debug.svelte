@@ -35,10 +35,7 @@
     <p class="hint">Click an element or drag to select a region.</p>
   </div>
   <footer class="button-row">
-    <button
-      class="btn-primary"
-      onclick={() => router.navigate("createAlert")}
-    >
+    <button class="btn-primary" onclick={() => router.navigate("createAlert")}>
       Create alert
       <ArrowRight />
     </button>

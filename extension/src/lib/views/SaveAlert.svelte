@@ -29,7 +29,7 @@
     });
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate('home');
+    router.navigate("home");
   }
 </script>
 
@@ -96,11 +96,7 @@
           > to enable Slack notifications.
         </p>
       </div>
-      <input
-        id="slack-webhook"
-        type="url"
-        bind:value={slackWebhook}
-      />
+      <input id="slack-webhook" type="url" bind:value={slackWebhook} />
     </div>
   </main>
   <footer class="button-row">
@@ -115,7 +111,9 @@
     height: 100%;
   }
 
-  header, main, footer {
+  header,
+  main,
+  footer {
     padding: 1em;
   }
 
@@ -217,6 +215,4 @@
   input::placeholder {
     color: #99a8b3;
   }
-
-
 </style>

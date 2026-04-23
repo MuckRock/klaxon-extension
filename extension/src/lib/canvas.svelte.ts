@@ -168,7 +168,10 @@ export function initCanvas(
 
     // Clamp to keep at least EDGE_PAD from each viewport edge and the sidebar
     const rightEdge = vw - sidebarWidth;
-    btnLeft = Math.max(EDGE_PAD, Math.min(btnLeft, rightEdge - BTN_SIZE - EDGE_PAD));
+    btnLeft = Math.max(
+      EDGE_PAD,
+      Math.min(btnLeft, rightEdge - BTN_SIZE - EDGE_PAD),
+    );
     btnTop = Math.max(EDGE_PAD, Math.min(btnTop, vh - BTN_SIZE - EDGE_PAD));
 
     dismissBtn.style.left = `${btnLeft}px`;

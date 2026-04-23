@@ -18,32 +18,46 @@
     onclose: () => void;
   }
 
-  let { selector, matchText, url, locked, onclearselection, onselectorchange, onroutechange, onclose }: Props =
-    $props();
+  let {
+    selector,
+    matchText,
+    url,
+    locked,
+    onclearselection,
+    onselectorchange,
+    onroutechange,
+    onclose,
+  }: Props = $props();
 </script>
 
 <Toaster>
   <Router initialView="home" onchange={onroutechange}>
     {#snippet children(router)}
-    <div class="sidebar">
-      <div class="header">
-        <h2>Klaxon</h2>
-        <button onclick={onclose} aria-label="Close">
-          <X />
-        </button>
-      </div>
+      <div class="sidebar">
+        <div class="header">
+          <h2>Klaxon</h2>
+          <button onclick={onclose} aria-label="Close">
+            <X />
+          </button>
+        </div>
 
-      <div class="body">
-        <ToastList />
-        {#if router.view === "home"}
-          <Debug {selector} {matchText} {url} />
-        {:else if router.view === "createAlert"}
-          <CreateAlert {locked} {selector} {matchText} {onselectorchange} {onclearselection} />
-        {:else if router.view === "saveAlert"}
-          <SaveAlert {selector} {matchText} {url} onsave={onclearselection} />
-        {/if}
+        <div class="body">
+          <ToastList />
+          {#if router.view === "home"}
+            <Debug {selector} {matchText} {url} />
+          {:else if router.view === "createAlert"}
+            <CreateAlert
+              {locked}
+              {selector}
+              {matchText}
+              {onselectorchange}
+              {onclearselection}
+            />
+          {:else if router.view === "saveAlert"}
+            <SaveAlert {selector} {matchText} {url} onsave={onclearselection} />
+          {/if}
+        </div>
       </div>
-    </div>
     {/snippet}
   </Router>
 </Toaster>

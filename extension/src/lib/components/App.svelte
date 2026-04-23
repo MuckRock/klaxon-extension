@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { initCanvas, type Canvas } from "../canvas.svelte.ts";
   import { getCanonicalURL } from "../url";
   import Sidebar from "./Sidebar.svelte";
@@ -24,9 +24,7 @@
     canvas.active = view === "createAlert";
   }
 
-  $effect(() => {
-    return () => canvas.destroy();
-  });
+  onDestroy(() => canvas.destroy());
 </script>
 
 <Sidebar

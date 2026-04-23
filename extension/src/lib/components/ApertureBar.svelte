@@ -88,7 +88,9 @@
     onkeydown={stopPropagation}
   >
     <div class="top-row">
-      <p class="label">Not quite right? Make your selection wider or narrower:</p>
+      <p class="label">
+        Not quite right? Make your selection wider or narrower:
+      </p>
     </div>
     <div class="bottom-row">
       <button class="icon-btn" onclick={zoomOut} aria-label="Zoom out">
@@ -124,7 +126,8 @@
     border-radius: 0.75em;
     z-index: 2147483647;
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     pointer-events: auto;
     box-sizing: border-box;
