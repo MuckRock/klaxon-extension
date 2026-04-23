@@ -45,7 +45,7 @@
 
 <div class="container create-alert">
   <header>
-    <button class="back-link" onclick={() => router.navigate("home")}>
+    <button class="back-link" onclick={() => { onclearselection(); router.navigate("home"); }}>
       &#8249; <span>Back</span>
     </button>
   </header>

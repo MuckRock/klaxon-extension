@@ -40,7 +40,7 @@
         {:else if router.view === "createAlert"}
           <CreateAlert {locked} {selector} {matchText} {onselectorchange} {onclearselection} />
         {:else if router.view === "saveAlert"}
-          <SaveAlert {selector} {matchText} {url} />
+          <SaveAlert {selector} {matchText} {url} onsave={onclearselection} />
         {/if}
       </div>
     </div>

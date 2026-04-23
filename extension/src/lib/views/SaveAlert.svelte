@@ -6,9 +6,10 @@
     selector: string | null;
     matchText: string | null;
     url: string;
+    onsave: () => void;
   }
 
-  let { selector, matchText, url }: Props = $props();
+  let { selector, matchText, url, onsave }: Props = $props();
 
   const router = getRouter();
   const toaster = getToaster();
@@ -26,6 +27,7 @@
       name,
       slackWebhook,
     });
+    onsave();
     toaster.success("Alert saved successfully!");
     router.navigate('home');
   }

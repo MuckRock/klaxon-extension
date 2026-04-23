@@ -59,7 +59,6 @@ export function initCanvas(
       document.body.style.userSelect = "none";
     } else {
       document.body.style.userSelect = prevUserSelect;
-      clearSelection();
     }
   }
 
