@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getRouter } from "../components/Router.svelte";
+  import { getToaster } from "../components/Toaster.svelte";
 
   interface Props {
     selector: string | null;
@@ -10,6 +11,7 @@
   let { selector, matchText, url }: Props = $props();
 
   const router = getRouter();
+  const toaster = getToaster();
 
   let frequency = $state("weekly");
   let name = $state("");
@@ -24,6 +26,7 @@
       name,
       slackWebhook,
     });
+    toaster.success("Alert saved successfully!");
     router.navigate('home');
   }
 </script>

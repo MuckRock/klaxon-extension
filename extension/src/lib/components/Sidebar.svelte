@@ -3,6 +3,8 @@
   import CreateAlert from "../views/CreateAlert.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
   import Router from "./Router.svelte";
+  import Toaster from "./Toaster.svelte";
+  import ToastList from "./ToastList.svelte";
   import { X } from "@lucide/svelte";
 
   interface Props {
@@ -20,28 +22,31 @@
     $props();
 </script>
 
-<Router initialView="home" onchange={onroutechange}>
-  {#snippet children(router)}
-  <div class="sidebar">
-    <div class="header">
-      <h2>Klaxon</h2>
-      <button onclick={onclose} aria-label="Close">
-        <X />
-      </button>
-    </div>
+<Toaster>
+  <Router initialView="home" onchange={onroutechange}>
+    {#snippet children(router)}
+    <div class="sidebar">
+      <div class="header">
+        <h2>Klaxon</h2>
+        <button onclick={onclose} aria-label="Close">
+          <X />
+        </button>
+      </div>
 
-    <div class="body">
-      {#if router.view === "home"}
-        <Debug {selector} {matchText} {url} />
-      {:else if router.view === "createAlert"}
-        <CreateAlert {locked} {selector} {matchText} {onselectorchange} {onclearselection} />
-      {:else if router.view === "saveAlert"}
-        <SaveAlert {selector} {matchText} {url} />
-      {/if}
+      <div class="body">
+        <ToastList />
+        {#if router.view === "home"}
+          <Debug {selector} {matchText} {url} />
+        {:else if router.view === "createAlert"}
+          <CreateAlert {locked} {selector} {matchText} {onselectorchange} {onclearselection} />
+        {:else if router.view === "saveAlert"}
+          <SaveAlert {selector} {matchText} {url} />
+        {/if}
+      </div>
     </div>
-  </div>
-  {/snippet}
-</Router>
+    {/snippet}
+  </Router>
+</Toaster>
 
 <style>
   .sidebar {
