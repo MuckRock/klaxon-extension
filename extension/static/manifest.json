@@ -1,7 +1,8 @@
 {
   "background": {
     "service_worker": "background.js",
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "type": "module"
   },
   "action": {
     "default_icon": "icon-128.png",
@@ -15,7 +16,7 @@
     "48": "icon-48.png",
     "128": "icon-128.png"
   },
-  "permissions": ["scripting", "activeTab"],
+  "permissions": ["scripting", "activeTab", "identity", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "version": "0.1",
   "manifest_version": 3,
