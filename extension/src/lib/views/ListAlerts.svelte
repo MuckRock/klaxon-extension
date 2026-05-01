@@ -3,6 +3,7 @@
   import { getRouter } from "../components/Router.svelte";
   import type { Event, Page, Run } from "../types";
   import RelativeTime from "../components/RelativeTime.svelte";
+  import Welcome from "../components/Welcome.svelte";
 
   interface Props {
     events: Page<Event>;
@@ -32,35 +33,36 @@
 
 <div class="container list-alerts">
   <main class="section">
-    {#if isEmpty}
-      <div class="empty-state">
-        <h3 class="welcome">Welcome to Klaxon</h3>
-        <p class="empty-message">
-          You don't have any alerts for this page.
-        </p>
-      </div>
-    {:else}
-      <div class="alerts-body">
-        <p class="summary">
-          You have <strong>{events.results.length} alert{events.results.length === 1 ? "" : "s"}</strong>
-          for this page. Here are the most recent changes:
-        </p>
-
-        <div class="table">
-          {#each recentRuns as run (run.uuid)}
-            <div class="table-row">
-              <p class="row-title">{getSiteLabel(run)}</p>
-              <div class="row-meta">
-                <span class="changed">Changed: <RelativeTime date={new Date(run.updated_at)} /></span>
-                <button class="view-changes">View changes</button>
-              </div>
-            </div>
-          {/each}
+    <Welcome>
+      {#if isEmpty}
+        <div class="empty-state">
+          <p class="empty-message">
+            You don't have any alerts for this page.
+          </p>
         </div>
+      {:else}
+        <div class="alerts-body">
+          <p class="summary">
+            You have <strong>{events.results.length} alert{events.results.length === 1 ? "" : "s"}</strong>
+            for this page. Here are the most recent changes:
+          </p>
 
-        <button class="view-all">View all your alerts for this page &#187;</button>
-      </div>
-    {/if}
+          <div class="table">
+            {#each recentRuns as run (run.uuid)}
+              <div class="table-row">
+                <p class="row-title">{getSiteLabel(run)}</p>
+                <div class="row-meta">
+                  <span class="changed">Changed: <RelativeTime date={new Date(run.updated_at)} /></span>
+                  <button class="view-changes">View changes</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          <button class="view-all">View all your alerts for this page &#187;</button>
+        </div>
+      {/if}
+    </Welcome>
   </main>
 
   <footer class="button-row">
