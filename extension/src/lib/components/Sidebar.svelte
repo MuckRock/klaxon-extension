@@ -1,7 +1,10 @@
 <script lang="ts">
-  import Debug from "../views/Debug.svelte";
+  import ListAlerts from "../views/ListAlerts.svelte";
   import CreateAlert from "../views/CreateAlert.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
+  // Mocking data until we have working loading functions
+  import { eventsList } from "../../test/fixtures/events";
+  import { runs } from "../../test/fixtures/runs";
   import Router from "./Router.svelte";
   import Toaster from "./Toaster.svelte";
   import ToastList from "./ToastList.svelte";
@@ -31,7 +34,7 @@
 </script>
 
 <Toaster>
-  <Router initialView="home" onchange={onroutechange}>
+  <Router initialView="listAlerts" onchange={onroutechange}>
     {#snippet children(router)}
       <div class="sidebar">
         <div class="header">
@@ -43,8 +46,8 @@
 
         <div class="body">
           <ToastList />
-          {#if router.view === "home"}
-            <Debug {selector} {matchText} {url} />
+          {#if router.view === "listAlerts"}
+            <ListAlerts events={eventsList} {runs} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               {locked}

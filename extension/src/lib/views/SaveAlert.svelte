@@ -29,7 +29,7 @@
     });
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate("home");
+    router.navigate("listAlerts");
   }
 </script>
 
