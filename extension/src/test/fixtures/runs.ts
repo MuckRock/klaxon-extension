@@ -1,5 +1,11 @@
 import type { Page, Run } from "../../lib/types";
 
+export const emptyRuns: Page<Run> = {
+  next: null,
+  previous: null,
+  results: [],
+};
+
 export const runs: Page<Run> = {
   next: "https://api.www.documentcloud.org/api/addon_runs/?addon=436&cursor=cD0yMDI2LTA0LTI1KzE0JTNBMTUlM0EwMC4xMjg4ODYlMkIwMCUzQTAw&dismissed=&event=&expand=~all&format=json",
   previous: null,

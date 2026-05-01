@@ -36,9 +36,8 @@
       <div class="empty-state">
         <h3 class="welcome">Welcome to Klaxon</h3>
         <p class="empty-message">
-          You don't currently have any alerts for this page.
+          You don't have any alerts for this page.
         </p>
-        <p class="empty-message emphasis">Want to fix that?</p>
       </div>
     {:else}
       <div class="alerts-body">
@@ -88,6 +87,7 @@
     flex: 1 1 auto;
   }
 
+  
   .section {
     display: flex;
     flex-direction: column;
@@ -95,7 +95,7 @@
     padding: 1em;
     flex: 1 1 auto;
   }
-
+  
   .empty-state {
     flex: 1;
     display: flex;
@@ -104,16 +104,16 @@
     text-align: center;
     gap: 4px;
   }
-
+  
   .empty-message {
-    margin: 0;
+    margin: 0 0 1em;
     font-size: 16px;
     line-height: 1.3;
     color: #0c1e27;
   }
-
-  .empty-message.emphasis {
-    font-weight: 700;
+  
+  .welcome {
+    font-size: 2em;
   }
 
   .alerts-body {

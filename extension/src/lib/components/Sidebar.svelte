@@ -3,8 +3,8 @@
   import CreateAlert from "../views/CreateAlert.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
   // Mocking data until we have working loading functions
-  import { eventsList } from "../../test/fixtures/events";
-  import { runs } from "../../test/fixtures/runs";
+  import { eventsList, emptyEventsList } from "../../test/fixtures/events";
+  import { runs, emptyRuns } from "../../test/fixtures/runs";
   import Router from "./Router.svelte";
   import Toaster from "./Toaster.svelte";
   import ToastList from "./ToastList.svelte";
@@ -47,7 +47,7 @@
         <div class="body">
           <ToastList />
           {#if router.view === "listAlerts"}
-            <ListAlerts events={eventsList} {runs} />
+            <ListAlerts events={emptyEventsList} runs={emptyRuns} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               {locked}
