@@ -8,7 +8,7 @@
   import Router from "./Router.svelte";
   import Toaster from "./Toaster.svelte";
   import ToastList from "./ToastList.svelte";
-  import { X } from "@lucide/svelte";
+  import Header from "./Header.svelte";
 
   interface Props {
     selector: string;
@@ -37,17 +37,12 @@
   <Router initialView="listAlerts" onchange={onroutechange}>
     {#snippet children(router)}
       <div class="sidebar">
-        <div class="header">
-          <h2>Klaxon</h2>
-          <button onclick={onclose} aria-label="Close">
-            <X />
-          </button>
-        </div>
+        <Header {onclose} />
 
         <div class="body">
           <ToastList />
           {#if router.view === "listAlerts"}
-            <ListAlerts events={emptyEventsList} runs={emptyRuns} />
+            <ListAlerts events={eventsList} runs={runs} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               {locked}
@@ -82,35 +77,6 @@
     display: flex;
     flex-direction: column;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid #eee;
-    background: #f8f8f8;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .header button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-    padding: 0 4px;
-    line-height: 1;
-  }
-
-  .header button:hover {
-    color: #000;
   }
 
   .body {
