@@ -12,6 +12,7 @@ import type {
   AddOnPayload,
   AddOnSchedule,
   APIResponse,
+  Event,
   KlaxonParams,
   Page,
   Run,

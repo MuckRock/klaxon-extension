@@ -2,7 +2,16 @@
   import { onDestroy, untrack } from "svelte";
   import { initCanvas, type Canvas } from "../canvas.svelte.ts";
   import { getCanonicalURL } from "../url";
-  import Sidebar from "./Sidebar.svelte";
+  import { authState } from "../auth.svelte.ts";
+  import { scheduled, history } from "../api";
+  import type { Page, Event, Run } from "../types";
+  import ListAlerts from "../views/ListAlerts.svelte";
+  import CreateAlert from "../views/CreateAlert.svelte";
+  import SaveAlert from "../views/SaveAlert.svelte";
+  import Router from "./Router.svelte";
+  import Toaster from "./Toaster.svelte";
+  import ToastList from "./ToastList.svelte";
+  import Header from "./Header.svelte";
 
   interface Props {
     host: HTMLElement;
@@ -20,6 +29,30 @@
   );
   const url = getCanonicalURL();
 
+  const emptyPage = <T,>(): Page<T> => ({
+    next: null,
+    previous: null,
+    results: [],
+  });
+
+  let events: Page<Event> = $state(emptyPage());
+  let runs: Page<Run> = $state(emptyPage());
+
+  async function loadData() {
+    const [eventsRes, runsRes] = await Promise.all([
+      scheduled(url),
+      history(url),
+    ]);
+    if (eventsRes.data) events = eventsRes.data;
+    if (runsRes.data) runs = runsRes.data;
+  }
+
+  $effect(() => {
+    if (authState.status === "authenticated") {
+      loadData();
+    }
+  });
+
   function handleRouteChange(view: string) {
     canvas.active = view === "createAlert";
   }
@@ -27,18 +60,62 @@
   onDestroy(() => canvas.destroy());
 </script>
 
-<Sidebar
-  selector={canvas.state.selector}
-  matchText={canvas.state.matchText}
-  locked={canvas.state.locked}
-  {url}
-  onclearselection={() => canvas.clearSelection()}
-  onselectorchange={(css) => canvas.setSelector(css)}
-  onroutechange={handleRouteChange}
-  {onclose}
-/>
+<Toaster>
+  <Router initialView="listAlerts" onchange={handleRouteChange}>
+    {#snippet children(router)}
+      <div class="sidebar">
+        <Header {onclose} />
+
+        <div class="body">
+          <ToastList />
+          {#if router.view === "listAlerts"}
+            <ListAlerts {events} {runs} />
+          {:else if router.view === "createAlert"}
+            <CreateAlert
+              locked={canvas.state.locked}
+              selector={canvas.state.selector}
+              matchText={canvas.state.matchText}
+              onselectorchange={(css) => canvas.setSelector(css)}
+              onclearselection={() => canvas.clearSelection()}
+            />
+          {:else if router.view === "saveAlert"}
+            <SaveAlert
+              selector={canvas.state.selector}
+              matchText={canvas.state.matchText}
+              {url}
+              onsave={() => canvas.clearSelection()}
+            />
+          {/if}
+        </div>
+      </div>
+    {/snippet}
+  </Router>
+</Toaster>
 
 <style>
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100vh;
+    background: #fff;
+    border-left: 2px solid #ccc;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    color: #333;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .body {
+    overflow-y: auto;
+    flex: 1;
+  }
+
   :global(.btn-primary) {
     display: flex;
     align-items: center;
