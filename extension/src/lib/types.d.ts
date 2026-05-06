@@ -69,7 +69,7 @@ export interface Org {
 
 type AddOnCategory = "premium" | string;
 
-type AddOnSchedule = "disabled" | "hourly" | "daily" | "weekly" | "upload";
+export type AddOnSchedule = "disabled" | "hourly" | "daily" | "weekly" | "upload";
 
 export interface AddOnParams extends PageParams {
   query?: string;
