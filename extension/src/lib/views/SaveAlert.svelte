@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { AddOnSchedule } from "../types";
-  
+
   import { getRouter } from "../components/Router.svelte";
   import { getToaster } from "../components/Toaster.svelte";
   import { dispatch } from "../api";

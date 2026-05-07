@@ -5,7 +5,7 @@
 //   2. Handle OIDC auth messages from the content script (PKCE flow against
 //      Squarelet). All network + storage work lives here because
 //      chrome.identity.launchWebAuthFlow is not available to content scripts.
-
+import type { AuthTokenResponse, UserInfoResponse } from "./lib/types";
 import {
   buildAuthorizeUrl,
   decodeJwtPayload,
@@ -14,10 +14,7 @@ import {
   randomBase64Url,
   getAuthToken,
   getUserInfo,
-  type AuthTokenResponse,
-  type UserInfoResponse,
   refreshUserInfoToken,
-  RefreshUserInfoTokenResponse,
   hasTokenExpired,
 } from "./lib/oidc.ts";
 

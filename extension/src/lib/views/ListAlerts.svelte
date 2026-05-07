@@ -124,10 +124,6 @@
     color: #0c1e27;
   }
 
-  .welcome {
-    font-size: 2em;
-  }
-
   .alerts-body {
     display: flex;
     flex-direction: column;
