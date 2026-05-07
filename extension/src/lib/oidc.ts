@@ -1,4 +1,5 @@
-// Pure OIDC/PKCE helpers. No chrome.* or fetch — just crypto + string math.
+// Pure OIDC/PKCE/OAuth helpers
+import { AuthTokenResponse, UserInfoResponse } from "./types";
 
 export function base64UrlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -36,6 +37,7 @@ export interface OidcEndpoints {
   token: string;
   userinfo: string;
   endSession: string;
+  refresh: string;
 }
 
 export function endpoints(host: string): OidcEndpoints {
@@ -45,6 +47,7 @@ export function endpoints(host: string): OidcEndpoints {
     token: `${base}/openid/token`,
     userinfo: `${base}/openid/userinfo`,
     endSession: `${base}/openid/end-session`,
+    refresh: `${base}/api/refresh`
   };
 }
 
@@ -79,4 +82,66 @@ export function buildAuthorizeUrl({
     code_challenge_method: "S256",
   }).toString();
   return url.toString();
+}
+
+export async function getAuthToken(url: string, params: URLSearchParams): Promise<AuthTokenResponse> {
+  const tokenResp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params
+  });
+  if (!tokenResp.ok) {
+    throw new Error(
+      `Token exchange failed: ${tokenResp.status} ${await tokenResp.text()}`,
+    );
+  }
+  const tokenData: AuthTokenResponse = {
+    ...await tokenResp.json() as Omit<AuthTokenResponse, "issued_at">,
+    issued_at: Date.now()
+  };
+  return tokenData as AuthTokenResponse;
+}
+
+export async function getUserInfo(url: string, token: string): Promise<UserInfoResponse> {
+  const userResp = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!userResp.ok) {
+    throw new Error(
+      `Failed to fetch user data: ${userResp.status} ${await userResp.text()}`
+    )
+  }
+  const user = {
+    ...await userResp.json() as Omit<UserInfoResponse, "issued_at">,
+    issued_at: Date.now()
+  }
+  return user;
+}
+
+export interface RefreshUserInfoTokenResponse {
+  refresh: string;                // The new refresh token
+  access: string;                 // The new access token
+}
+
+export async function refreshUserInfoToken(url: string, token: string): Promise<RefreshUserInfoTokenResponse> {
+  const refreshResp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ refresh: token }),
+  });
+  if (!refreshResp.ok) {
+    throw new Error(
+      `Failed to refresh userinfo access_token: ${refreshResp.status} ${await refreshResp.text()}`
+    )
+  }
+  return refreshResp.json();
+}
+
+export function hasTokenExpired(tokenObj: AuthTokenResponse): boolean {
+  // issuedAt is in milliseconds, expiresIn is in seconds, so normalize to milliseconds
+  // apply a 300 second buffer so that we're agressive about refreshing our tokens
+  const expiresAt = tokenObj.issued_at + ((tokenObj.expires_in - 300) * 1000);
+  return Date.now() >= expiresAt;
 }
