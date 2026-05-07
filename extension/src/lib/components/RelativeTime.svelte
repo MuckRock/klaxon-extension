@@ -1,7 +1,7 @@
 <script lang="ts">
   // Copied from RelativeTime.svelte in `muckrock/documentcloud-frontend`
   // https://github.com/MuckRock/documentcloud-frontend/blob/main/src/lib/components/common/RelativeTime.svelte
-  
+
   interface Props {
     date: Date;
   }

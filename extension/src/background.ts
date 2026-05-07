@@ -18,7 +18,7 @@ import {
   type UserInfoResponse,
   refreshUserInfoToken,
   RefreshUserInfoTokenResponse,
-  hasTokenExpired
+  hasTokenExpired,
 } from "./lib/oidc.ts";
 
 // Log the OAuth redirect URI on every SW boot — register this exact string
@@ -37,7 +37,7 @@ chrome.action.onClicked.addListener((tab) => {
 const STORAGE_KEY = "muckrock_auth";
 
 interface StoredAuth {
-  auth: AuthTokenResponse;       // the response from `/openid/token`
+  auth: AuthTokenResponse; // the response from `/openid/token`
   userinfo: UserInfoResponse; // the response from `/openid/userinfo`
 }
 
@@ -60,7 +60,11 @@ interface AuthConfig {
   scopes: string;
 }
 
-async function signIn({ host, clientId, scopes }: AuthConfig): Promise<StoredAuth> {
+async function signIn({
+  host,
+  clientId,
+  scopes,
+}: AuthConfig): Promise<StoredAuth> {
   // The first step of signing in is to send users to MuckRock Accounts.
   // This is where they enter their username and password.
   const ep = endpoints(host);
@@ -95,13 +99,16 @@ async function signIn({ host, clientId, scopes }: AuthConfig): Promise<StoredAut
   const code = cb.searchParams.get("code");
   if (!code) throw new Error("No authorization code");
 
-  const auth = await getAuthToken(ep.token, new URLSearchParams({
-    grant_type: "authorization_code",
-    code,
-    redirect_uri: redirectUri,
-    client_id: clientId,
-    code_verifier: verifier,
-  }));
+  const auth = await getAuthToken(
+    ep.token,
+    new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      code_verifier: verifier,
+    }),
+  );
   // Check that everything is on the up-and-up
   const idPayload = decodeJwtPayload(auth.id_token);
   if (idPayload.nonce !== nonce) throw new Error("ID token nonce mismatch");
@@ -120,7 +127,10 @@ async function signIn({ host, clientId, scopes }: AuthConfig): Promise<StoredAut
   return stored;
 }
 
-async function refreshTokens({ host, clientId }: Omit<AuthConfig, "scopes">): Promise<StoredAuth | null> {
+async function refreshTokens({
+  host,
+  clientId,
+}: Omit<AuthConfig, "scopes">): Promise<StoredAuth | null> {
   // I know that this is a bit of a ratking of logic, but not sure the best way to structure it.
   // Refresh token logic is two layers deep, conditional upon errors:
   // First, try refreshing `userinfo.access_token` with `userinfo.refresh_token`.
@@ -132,9 +142,13 @@ async function refreshTokens({ host, clientId }: Omit<AuthConfig, "scopes">): Pr
   let userinfo: UserInfoResponse | undefined = undefined;
   let auth: AuthTokenResponse | undefined = undefined;
   try {
-    if (!stored?.userinfo.refresh_token) throw new Error('No refresh token for userinfo.');
+    if (!stored?.userinfo.refresh_token)
+      throw new Error("No refresh token for userinfo.");
     // Get fresh tokens for userinfo, from `/api/refresh`
-    const userInfoTokens = await refreshUserInfoToken(ep.refresh, stored.userinfo.refresh_token);
+    const userInfoTokens = await refreshUserInfoToken(
+      ep.refresh,
+      stored.userinfo.refresh_token,
+    );
     // With fresh tokens, we can now refresh data from userinfo
     userinfo = await getUserInfo(ep.userinfo, userInfoTokens.access);
   } catch (error) {
@@ -143,14 +157,17 @@ async function refreshTokens({ host, clientId }: Omit<AuthConfig, "scopes">): Pr
     try {
       // First, we try refreshing our Squarelet access_token
       if (!stored?.auth.refresh_token) {
-        throw new Error('No refresh token for Squarelet.');
+        throw new Error("No refresh token for Squarelet.");
       }
       // Get fresh access_token from Squarelet
-      auth = await getAuthToken(ep.token, new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: stored.auth.refresh_token,
-        client_id: clientId,
-      }));
+      auth = await getAuthToken(
+        ep.token,
+        new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: stored.auth.refresh_token,
+          client_id: clientId,
+        }),
+      );
       // With fresh token, we can now refresh data from userinfo
       userinfo = await getUserInfo(ep.userinfo, auth.access_token);
     } catch (error) {
@@ -164,15 +181,17 @@ async function refreshTokens({ host, clientId }: Omit<AuthConfig, "scopes">): Pr
   // Now that we've refreshed data, update our store
   const fresh: StoredAuth = {
     auth: auth ?? stored.auth,
-    userinfo: userinfo ?? stored.userinfo
-  }
+    userinfo: userinfo ?? stored.userinfo,
+  };
   await writeStored(fresh);
   return fresh;
 }
 
 // Dedupe concurrent refresh calls so multiple callers share one network round-trip.
 let refreshPromise: Promise<StoredAuth | null> | null = null;
-function dedupedRefresh(args: Omit<AuthConfig, "scopes">): Promise<StoredAuth | null> {
+function dedupedRefresh(
+  args: Omit<AuthConfig, "scopes">,
+): Promise<StoredAuth | null> {
   if (!refreshPromise) {
     refreshPromise = refreshTokens(args).finally(() => {
       refreshPromise = null;
@@ -181,7 +200,10 @@ function dedupedRefresh(args: Omit<AuthConfig, "scopes">): Promise<StoredAuth | 
   return refreshPromise;
 }
 
-async function accessToken({ host, clientId }: Omit<AuthConfig, "scopes">): Promise<string | null> {
+async function accessToken({
+  host,
+  clientId,
+}: Omit<AuthConfig, "scopes">): Promise<string | null> {
   // First try getting any saved access tokens from storage
   const stored = await readStored();
   if (!stored?.userinfo.access_token) return null;
@@ -223,7 +245,7 @@ interface AuthMessage {
 }
 
 function isAuthMessage(t: AuthMessage | FetchMessage): t is AuthMessage {
-  return t.type.startsWith("auth/")
+  return t.type.startsWith("auth/");
 }
 
 interface FetchMessage {
@@ -233,50 +255,63 @@ interface FetchMessage {
 }
 
 function isFetchMessage(t: AuthMessage | FetchMessage): t is FetchMessage {
-  return t.type === "api/fetch"
+  return t.type === "api/fetch";
 }
 
-chrome.runtime.onMessage.addListener((msg: AuthMessage | FetchMessage, _sender, sendResponse) => {
-  if (!msg?.type) return false;
+chrome.runtime.onMessage.addListener(
+  (msg: AuthMessage | FetchMessage, _sender, sendResponse) => {
+    if (!msg?.type) return false;
 
-  if (isFetchMessage(msg)) {
+    if (isFetchMessage(msg)) {
+      (async () => {
+        try {
+          const resp = await fetch(msg.url, msg.options);
+          const body = resp.headers
+            .get("content-type")
+            ?.includes("application/json")
+            ? await resp.json()
+            : await resp.text();
+          sendResponse({
+            ok: true,
+            data: { status: resp.status, statusText: resp.statusText, body },
+          });
+        } catch (e) {
+          sendResponse({
+            ok: false,
+            error: (e as Error)?.message ?? String(e),
+          });
+        }
+      })();
+      return true;
+    }
+
+    if (!isAuthMessage(msg)) return false;
     (async () => {
       try {
-        const resp = await fetch(msg.url, msg.options);
-        const body = resp.headers.get("content-type")?.includes("application/json")
-          ? await resp.json()
-          : await resp.text();
-        sendResponse({ ok: true, data: { status: resp.status, statusText: resp.statusText, body } });
+        switch (msg.type) {
+          case "auth/login":
+            sendResponse({ ok: true, data: await signIn(msg.config) });
+            break;
+          case "auth/logout":
+            await signOut(msg.config);
+            sendResponse({ ok: true });
+            break;
+          case "auth/token":
+            sendResponse({ ok: true, data: await accessToken(msg.config) });
+            break;
+          case "auth/state":
+            sendResponse({ ok: true, data: await readStored() });
+            break;
+          default:
+            sendResponse({ ok: false, error: `unknown message: ${msg.type}` });
+        }
       } catch (e) {
-        sendResponse({ ok: false, error: (e as Error)?.message ?? String(e) });
+        sendResponse({
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     })();
     return true;
-  }
-
-  if (!isAuthMessage(msg)) return false;
-  (async () => {
-    try {
-      switch (msg.type) {
-        case "auth/login":
-          sendResponse({ ok: true, data: await signIn(msg.config) });
-          break;
-        case "auth/logout":
-          await signOut(msg.config);
-          sendResponse({ ok: true });
-          break;
-        case "auth/token":
-          sendResponse({ ok: true, data: await accessToken(msg.config) });
-          break;
-        case "auth/state":
-          sendResponse({ ok: true, data: await readStored() });
-          break;
-        default:
-          sendResponse({ ok: false, error: `unknown message: ${msg.type}` });
-      }
-    } catch (e) {
-      sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });
-    }
-  })();
-  return true;
-});
+  },
+);

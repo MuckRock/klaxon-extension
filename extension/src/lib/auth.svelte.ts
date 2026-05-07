@@ -3,7 +3,7 @@
 // All heavy lifting (PKCE, token exchange, storage) happens in the service
 // worker at static/background.js. This module sends messages to the SW and
 // mirrors the stored auth record into a reactive $state for the UI.
-import type { StoredAuth, UserInfoResponse } from './types';
+import type { StoredAuth, UserInfoResponse } from "./types";
 
 const STORAGE_KEY = "muckrock_auth";
 const DEFAULT_SCOPES = "openid profile email uuid organizations";
@@ -67,7 +67,8 @@ function applyStored(stored: StoredAuth | null) {
   }
   authState.status = "authenticated";
   authState.user = stored.userinfo;
-  authState.expiresAt = stored.userinfo.issued_at + stored.userinfo.expires_in * 1000;
+  authState.expiresAt =
+    stored.userinfo.issued_at + stored.userinfo.expires_in * 1000;
   authState.error = null;
 }
 

@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { ArrowRight } from "@lucide/svelte";
-  import { getRouter } from "../components/Router.svelte";
   import type { Event, Page, Run } from "../types";
+
+  import { ArrowRight } from "@lucide/svelte";
+
   import RelativeTime from "../components/RelativeTime.svelte";
   import Welcome from "../components/Welcome.svelte";
+
+  import { getRouter } from "../components/Router.svelte";
 
   interface Props {
     events: Page<Event>;
@@ -36,14 +39,16 @@
     <Welcome>
       {#if isEmpty}
         <div class="empty-state">
-          <p class="empty-message">
-            You don't have any alerts for this page.
-          </p>
+          <p class="empty-message">You don't have any alerts for this page.</p>
         </div>
       {:else}
         <div class="alerts-body">
           <p class="summary">
-            You have <strong>{events.results.length} alert{events.results.length === 1 ? "" : "s"}</strong>
+            You have <strong
+              >{events.results.length} alert{events.results.length === 1
+                ? ""
+                : "s"}</strong
+            >
             for this page. Here are the most recent changes:
           </p>
 
@@ -52,14 +57,20 @@
               <div class="table-row">
                 <p class="row-title">{getSiteLabel(run)}</p>
                 <div class="row-meta">
-                  <span class="changed">Changed: <RelativeTime date={new Date(run.updated_at)} /></span>
+                  <span class="changed"
+                    >Changed: <RelativeTime
+                      date={new Date(run.updated_at)}
+                    /></span
+                  >
                   <button class="view-changes">View changes</button>
                 </div>
               </div>
             {/each}
           </div>
 
-          <button class="view-all">View all your alerts for this page &#187;</button>
+          <button class="view-all"
+            >View all your alerts for this page &#187;</button
+          >
         </div>
       {/if}
     </Welcome>
@@ -89,7 +100,6 @@
     flex: 1 1 auto;
   }
 
-  
   .section {
     display: flex;
     flex-direction: column;
@@ -97,7 +107,7 @@
     padding: 1em;
     flex: 1 1 auto;
   }
-  
+
   .empty-state {
     flex: 1;
     display: flex;
@@ -106,14 +116,14 @@
     text-align: center;
     gap: 4px;
   }
-  
+
   .empty-message {
     margin: 0 0 1em;
     font-size: 16px;
     line-height: 1.3;
     color: #0c1e27;
   }
-  
+
   .welcome {
     font-size: 2em;
   }

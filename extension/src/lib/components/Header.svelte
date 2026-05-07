@@ -6,9 +6,7 @@
     onclose: () => void;
   }
 
-  const {
-    onclose
-  }: Props = $props();
+  const { onclose }: Props = $props();
 </script>
 
 <div class="container">
@@ -55,7 +53,8 @@
     border-bottom: 1px solid #eee;
     background: #f8f8f8;
   }
-  .header, .auth {
+  .header,
+  .auth {
     display: flex;
     justify-content: space-between;
     align-items: center;

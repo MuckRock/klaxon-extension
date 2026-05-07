@@ -41,7 +41,13 @@ async function swFetch(
       headers: options.headers,
       body: options.body,
     },
-  })) as { ok: boolean; data?: { status: number; statusText: string; body: unknown }; error?: string } | undefined;
+  })) as
+    | {
+        ok: boolean;
+        data?: { status: number; statusText: string; body: unknown };
+        error?: string;
+      }
+    | undefined;
 
   if (!reply?.ok) {
     console.warn("SW fetch failed:", reply?.error);

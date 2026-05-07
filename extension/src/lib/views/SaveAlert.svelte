@@ -1,8 +1,9 @@
 <script lang="ts">
+  import type { AddOnSchedule } from "../types";
+  
   import { getRouter } from "../components/Router.svelte";
   import { getToaster } from "../components/Toaster.svelte";
   import { dispatch } from "../api";
-  import type { AddOnSchedule } from "../types";
 
   interface Props {
     selector: string | null;
@@ -82,12 +83,7 @@
           this webpage.)
         </p>
       </div>
-      <input
-        id="alert-name"
-        type="text"
-        placeholder="TODO"
-        disabled
-      />
+      <input id="alert-name" type="text" placeholder="TODO" disabled />
     </div>
 
     <div class="field">
