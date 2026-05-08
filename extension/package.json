@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch & vite build --watch -c vite.config.background.ts",
+    "dev:content": "vite build --watch",
+    "dev:service": "vite build --watch -c vite.config.background.ts",
     "build": "vite build && vite build -c vite.config.background.ts",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check .",
