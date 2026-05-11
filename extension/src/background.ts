@@ -15,7 +15,7 @@ import {
   getAuthToken,
   getUserInfo,
   refreshUserInfoToken,
-  hasTokenExpired
+  hasTokenExpired,
 } from "./lib/oidc.ts";
 
 // Log the OAuth redirect URI on every SW boot — register this exact string
@@ -110,12 +110,12 @@ async function signIn({
   const idPayload = decodeJwtPayload(auth.id_token);
   if (idPayload.nonce !== nonce) throw new Error("ID token nonce mismatch");
   if (idPayload.aud !== clientId) throw new Error("ID token audience mismatch");
-  console.log('TOKEN RESPONSE\n\n', JSON.stringify(auth, null, 2));
+  console.log("TOKEN RESPONSE\n\n", JSON.stringify(auth, null, 2));
 
   // Now we have an OIDC access_token, which we use
   // to get user data with our *actual* access token
   const userinfo = await getUserInfo(ep.userinfo, auth.access_token);
-  console.log('USERINFO RESPONSE\n\n', JSON.stringify(userinfo, null, 2));
+  console.log("USERINFO RESPONSE\n\n", JSON.stringify(userinfo, null, 2));
 
   // Now that we have all our data, let's store it.
   const stored: StoredAuth = {

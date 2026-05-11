@@ -1,5 +1,9 @@
 # Browser extension OAuth (Squarelet)
 
+> **Note (2026-05-11):** As-built file layout has drifted from this plan. The service worker is now TypeScript at [`src/background.ts`](../extension/src/background.ts), built via [`vite.config.background.ts`](../extension/vite.config.background.ts) — not hand-written in `static/`. OIDC helpers live at [`src/lib/oidc.ts`](../extension/src/lib/oidc.ts), not `static/lib/oidc.js`. The "Architecture (as built)" and "Files touched" sections below have been corrected, but read with caution.
+>
+> A follow-on refactor to introduce DocumentCloud JWT exchange (Squarelet [PR #675](https://github.com/MuckRock/squarelet/pull/675)) is tracked separately in [auth-jwt-exchange.md](auth-jwt-exchange.md). Squarelet-side work (client registration, CORS, discovery-doc patch) and the redirect URI stability section here are still authoritative.
+
 ## Goal
 
 Sign the user into Squarelet from the Klaxon Cloud browser extension using OIDC authorization code + PKCE, with reactive state in the sidebar and silent token refresh across sessions.
@@ -97,9 +101,9 @@ Wire it in `config/urls.py` before the stock `include("oidc_provider.urls")`. Ou
 ## Architecture (as built)
 
 ```
-content script (main.svelte.ts)
-  └─ auth.svelte.ts (reactive $state + SW message client)
-       └─ chrome.runtime.sendMessage ──▶ background SW (static/background.js)
+content script (src/main.svelte.ts)
+  └─ src/lib/auth.svelte.ts (reactive $state + SW message client)
+       └─ chrome.runtime.sendMessage ──▶ background SW (src/background.ts)
                                           ├─ launchWebAuthFlow
                                           ├─ POST /openid/token (PKCE)
                                           ├─ GET /openid/userinfo
@@ -107,21 +111,21 @@ content script (main.svelte.ts)
                                           └─ chrome.storage.local
 ```
 
-Split that differs from the original plan:
+Notes on the split:
 
-- **Service worker stays hand-written in `static/`**, not built through vite. Vite's IIFE output (required for the content script injected via `chrome.scripting.executeScript`) can't handle multiple entries, and we didn't want to split the build. Since the SW doesn't need Svelte runes, plain JS is fine.
-- **Pure OIDC/PKCE helpers** live in `static/lib/oidc.js` as an ES module so the SW imports them at runtime (`manifest.background.type: "module"`) *and* vitest imports them via relative path from `src/content/tests/oidc.test.ts`. Single source of truth, no duplication.
-- **`auth.svelte.ts`** is the UI-side reactive client only. It sends messages to the SW and mirrors the stored auth record into `authState` (`$state` rune). Listens to `chrome.storage.onChanged` for cross-tab sync, guarded in case the API isn't available.
+- **Service worker is built by vite** via a second config, [`vite.config.background.ts`](../extension/vite.config.background.ts), producing `build/background.js` from the TS entry [`src/background.ts`](../extension/src/background.ts). Earlier iterations kept the SW as hand-written JS in `static/` to avoid multi-entry vite output; that constraint was lifted by giving the SW its own vite invocation.
+- **Pure OIDC/PKCE helpers** live in [`src/lib/oidc.ts`](../extension/src/lib/oidc.ts) and are imported by both the SW and vitest from [`src/lib/tests/oidc.test.ts`](../extension/src/lib/tests/oidc.test.ts). Single source of truth, no duplication.
+- **[`src/lib/auth.svelte.ts`](../extension/src/lib/auth.svelte.ts)** is the UI-side reactive client only. It sends messages to the SW and mirrors the stored auth record into `authState` (`$state` rune). Listens to `chrome.storage.onChanged` for cross-tab sync, guarded in case the API isn't available.
 
 ## Files touched
 
 - [extension/static/manifest.json](../extension/static/manifest.json) — `"identity"` + `"storage"` permissions, `"type": "module"` on the background entry, `"key"` field (stable extension ID), `browser_specific_settings.gecko.id` for Firefox.
-- [extension/static/background.js](../extension/static/background.js) — message router (`auth/login`, `auth/logout`, `auth/token`, `auth/state`), full PKCE flow, refresh with single-flight dedupe, end-session on logout. Logs `chrome.identity.getRedirectURL()` on boot.
-- [extension/static/lib/oidc.js](../extension/static/lib/oidc.js) — pure helpers: `base64UrlEncode`, `randomBase64Url`, `sha256`, `pkceChallenge`, `decodeJwtPayload`, `endpoints`, `buildAuthorizeUrl`. JSDoc-typed for `checkJs`.
+- [extension/src/background.ts](../extension/src/background.ts) — message router (`auth/login`, `auth/logout`, `auth/token`, `auth/state`), full PKCE flow, refresh with single-flight dedupe, end-session on logout. Logs `chrome.identity.getRedirectURL()` on boot. Built to `build/background.js` via [`vite.config.background.ts`](../extension/vite.config.background.ts).
+- [extension/src/lib/oidc.ts](../extension/src/lib/oidc.ts) — pure helpers: `base64UrlEncode`, `randomBase64Url`, `sha256`, `pkceChallenge`, `decodeJwtPayload`, `endpoints`, `buildAuthorizeUrl`.
 - [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts) — reactive `authState`, `login()`, `logout()`, `getAccessToken()`, `restore()`. Reads `MUCKROCK_*` from `import.meta.env`. Guarded `chrome.storage.onChanged` listener for cross-tab sync.
-- [extension/src/content/main.svelte.ts](../extension/src/content/main.svelte.ts) — calls `restore()` on inject so the sidebar seeds from existing tokens.
-- [extension/src/content/Sidebar.svelte](../extension/src/content/Sidebar.svelte) — sign-in/out UI, renders `authState.user`.
-- [extension/src/content/tests/oidc.test.ts](../extension/src/content/tests/oidc.test.ts) — 11 cases; RFC 7636 PKCE vector, SHA-256 empty-string vector, URL builder, endpoint derivation, JWT decode, no-client-secret assertion.
+- [extension/src/main.svelte.ts](../extension/src/main.svelte.ts) — calls `restore()` on inject so the sidebar seeds from existing tokens.
+- [extension/src/lib/components/Header.svelte](../extension/src/lib/components/Header.svelte) — sign-in/out UI, renders `authState.user`. (Originally planned as a single `Sidebar.svelte`; the UI was decomposed into `App`, `Header`, `Welcome`, `Router`, `Toaster` in [src/lib/components/](../extension/src/lib/components/).)
+- [extension/src/lib/tests/oidc.test.ts](../extension/src/lib/tests/oidc.test.ts) — 11 cases; RFC 7636 PKCE vector, SHA-256 empty-string vector, URL builder, endpoint derivation, JWT decode, no-client-secret assertion.
 - [extension/tsconfig.json](../extension/tsconfig.json) — `"noEmit": true` (vite handles build), `"chrome"` types.
 - [extension/.env.example](../extension/.env.example), [extension/README.md](../extension/README.md) — setup + redirect URI registration docs.
 
@@ -194,7 +198,7 @@ Firefox 86+ also accepts a loopback alternative: `http://127.0.0.1/mozoauth2/<su
   MDN confirms: *"`identity.getRedirectURL()` derives a redirect URL from the add-on's ID"* ([MDN: identity.getRedirectURL()](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/identity/getRedirectURL)). It also warns: *"if you use this function you should probably set your extension's ID explicitly using the `browser_specific_settings` key (otherwise, each time you temporarily install the extension, you'll get a different redirect URL)"* — which we already do.
 
   **Action:** Register the single stable Firefox redirect URI on Squarelet alongside the Chrome one. No intermediate redirect page, no regex matching, no Squarelet patches needed.
-- **Refresh-before-expiry timer.** Current implementation refreshes lazily on the next `getAccessToken()` after the 30s-before-expiry threshold. A background timer that refreshes proactively could avoid a first-request delay, but adds complexity (timers in MV3 SWs need `chrome.alarms`). Defer unless a UX issue appears.
+- **Refresh-before-expiry timer.** Refreshes lazily on the next `getAccessToken()` after expiry. A background timer that refreshes proactively could avoid a first-request delay, but adds complexity (timers in MV3 SWs need `chrome.alarms`). Defer unless a UX issue appears. *Re-examine once the JWT refactor in [auth-jwt-exchange.md](auth-jwt-exchange.md) lands — the 5-minute DC JWT lifetime makes proactive refresh much more attractive than the 1-hour OIDC token did.*
 - **Linter config is broken.** `eslint.config.js` imports a missing `svelte.config.js`; separate fix, not touched here.
 
 ## Rollout
