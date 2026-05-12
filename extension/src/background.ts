@@ -5,17 +5,19 @@
 //   2. Handle OIDC auth messages from the content script (PKCE flow against
 //      Squarelet). All network + storage work lives here because
 //      chrome.identity.launchWebAuthFlow is not available to content scripts.
-import type { OidcTokenResponse, UserInfoResponse } from "./lib/types";
+import type { StoredAuth } from "./lib/types";
 import {
   buildAuthorizeUrl,
   decodeJwtPayload,
   endpoints,
-  pkceChallenge,
-  randomBase64Url,
+  exchangeOidcForJwt,
   getAuthToken,
   getUserInfo,
+  hasJwtExpired,
+  isValidStoredAuth,
+  pkceChallenge,
+  randomBase64Url,
   refreshJwt,
-  hasTokenExpired,
 } from "./lib/oidc.ts";
 
 // Log the OAuth redirect URI on every SW boot — register this exact string
@@ -33,14 +35,17 @@ chrome.action.onClicked.addListener((tab) => {
 // Save auth data to local storage
 const STORAGE_KEY = "muckrock_auth";
 
-interface StoredAuth {
-  auth: OidcTokenResponse; // the response from `/openid/token`
-  userinfo: UserInfoResponse; // the response from `/openid/userinfo`
-}
-
 async function readStored(): Promise<StoredAuth | null> {
   const r = await chrome.storage.local.get(STORAGE_KEY);
-  return (r[STORAGE_KEY] as StoredAuth) ?? null;
+  const value = r[STORAGE_KEY];
+  if (!isValidStoredAuth(value)) {
+    // Drop legacy / partial records so the rest of the SW only sees the
+    // three-slot shape. Users on the old `{auth, userinfo}` storage get
+    // signed out once; next sign-in writes the new shape.
+    if (value !== undefined) await clearStored();
+    return null;
+  }
+  return value;
 }
 
 async function writeStored(data: StoredAuth): Promise<void> {
@@ -96,7 +101,7 @@ async function signIn({
   const code = cb.searchParams.get("code");
   if (!code) throw new Error("No authorization code");
 
-  const auth = await getAuthToken(
+  const oidc = await getAuthToken(
     ep.token,
     new URLSearchParams({
       grant_type: "authorization_code",
@@ -106,22 +111,18 @@ async function signIn({
       code_verifier: verifier,
     }),
   );
-  // Check that everything is on the up-and-up
-  const idPayload = decodeJwtPayload(auth.id_token);
+  const idPayload = decodeJwtPayload(oidc.id_token);
   if (idPayload.nonce !== nonce) throw new Error("ID token nonce mismatch");
   if (idPayload.aud !== clientId) throw new Error("ID token audience mismatch");
-  console.log("TOKEN RESPONSE\n\n", JSON.stringify(auth, null, 2));
 
-  // Now we have an OIDC access_token, which we use
-  // to get user data with our *actual* access token
-  const userinfo = await getUserInfo(ep.userinfo, auth.access_token);
-  console.log("USERINFO RESPONSE\n\n", JSON.stringify(userinfo, null, 2));
+  // Userinfo and JWT exchange are both gated only on the OIDC access token —
+  // run them in parallel.
+  const [userinfo, jwt] = await Promise.all([
+    getUserInfo(ep.userinfo, oidc.access_token),
+    exchangeOidcForJwt(ep.jwt, oidc.access_token),
+  ]);
 
-  // Now that we have all our data, let's store it.
-  const stored: StoredAuth = {
-    auth,
-    userinfo,
-  };
+  const stored: StoredAuth = { oidc, jwt, userinfo };
   await writeStored(stored);
   return stored;
 }
@@ -130,60 +131,45 @@ async function refreshTokens({
   host,
   clientId,
 }: Omit<AuthConfig, "scopes">): Promise<StoredAuth | null> {
-  // I know that this is a bit of a ratking of logic, but not sure the best way to structure it.
-  // Refresh token logic is two layers deep, conditional upon errors:
-  // First, try refreshing `userinfo.access_token` with `userinfo.refresh_token`.
-  // If that errors, try refreshing `token.access_token` with `token.refresh_token`.
-  //     - If that succeeds, get fresh info from `/openid/userinfo`.
-  //     - If that errors, we gotta wipe all our data to log out the user.
+  // Two refresh tiers:
+  //   1. Refresh the DC JWT directly via /api/refresh/. Cheapest path; no
+  //      userinfo round-trip and the OIDC token stays put.
+  //   2. Fall back to refreshing the OIDC token, then re-mint a JWT and
+  //      re-fetch userinfo. If that fails too, the user has to sign in again.
   const ep = endpoints(host);
   const stored = await readStored();
-  let userinfo: UserInfoResponse | undefined = undefined;
-  let auth: OidcTokenResponse | undefined = undefined;
+  if (!stored) return null;
+
   try {
-    if (!stored?.userinfo.refresh_token)
-      throw new Error("No refresh token for userinfo.");
-    // Get fresh tokens for userinfo, from `/api/refresh/`
-    const userInfoTokens = await refreshJwt(
-      ep.jwtRefresh,
-      stored.userinfo.refresh_token,
-    );
-    // With fresh tokens, we can now refresh data from userinfo
-    userinfo = await getUserInfo(ep.userinfo, userInfoTokens.access_token);
-  } catch (error) {
-    console.warn(error);
-    // Ok, we failed to get fresh tokens. So let's get fresh user data!
-    try {
-      // First, we try refreshing our Squarelet access_token
-      if (!stored?.auth.refresh_token) {
-        throw new Error("No refresh token for Squarelet.");
-      }
-      // Get fresh access_token from Squarelet
-      auth = await getAuthToken(
-        ep.token,
-        new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: stored.auth.refresh_token,
-          client_id: clientId,
-        }),
-      );
-      // With fresh token, we can now refresh data from userinfo
-      userinfo = await getUserInfo(ep.userinfo, auth.access_token);
-    } catch (error) {
-      console.warn(error);
-      // We failed to get an updated access token. The user must log back in.
-      // Clear any saved auth state we have.
-      await clearStored();
-      return null;
-    }
+    const jwt = await refreshJwt(ep.jwtRefresh, stored.jwt.refresh_token);
+    const fresh: StoredAuth = { ...stored, jwt };
+    await writeStored(fresh);
+    return fresh;
+  } catch (err) {
+    console.warn("[klaxon] JWT refresh failed:", err);
   }
-  // Now that we've refreshed data, update our store
-  const fresh: StoredAuth = {
-    auth: auth ?? stored.auth,
-    userinfo: userinfo ?? stored.userinfo,
-  };
-  await writeStored(fresh);
-  return fresh;
+
+  try {
+    const oidc = await getAuthToken(
+      ep.token,
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: stored.oidc.refresh_token,
+        client_id: clientId,
+      }),
+    );
+    const [userinfo, jwt] = await Promise.all([
+      getUserInfo(ep.userinfo, oidc.access_token),
+      exchangeOidcForJwt(ep.jwt, oidc.access_token),
+    ]);
+    const fresh: StoredAuth = { oidc, jwt, userinfo };
+    await writeStored(fresh);
+    return fresh;
+  } catch (err) {
+    console.warn("[klaxon] OIDC refresh failed:", err);
+    await clearStored();
+    return null;
+  }
 }
 
 // Dedupe concurrent refresh calls so multiple callers share one network round-trip.
@@ -203,17 +189,13 @@ async function accessToken({
   host,
   clientId,
 }: Omit<AuthConfig, "scopes">): Promise<string | null> {
-  // First try getting any saved access tokens from storage
+  // Returns the DC JWT — that's what the DocumentCloud API accepts. If it's
+  // still valid, return it directly; otherwise kick off a (deduped) refresh.
   const stored = await readStored();
-  console.log(JSON.stringify(stored, null, 2));
-  if (!stored?.userinfo.access_token) return null;
-  // If access token is still good, let's return it
-  if (!hasTokenExpired(stored.userinfo)) return stored.userinfo.access_token;
-  // If not, we need to refresh our token
-  // If we can't refresh our token, we consider ourselves signed out
+  if (!stored) return null;
+  if (!hasJwtExpired(stored.jwt.access_token)) return stored.jwt.access_token;
   const fresh = await dedupedRefresh({ host, clientId });
-  console.log(JSON.stringify(fresh, null, 2));
-  return fresh?.userinfo.access_token ?? null;
+  return fresh?.jwt.access_token ?? null;
 }
 
 async function signOut({ host }: Pick<AuthConfig, "host">): Promise<void> {
@@ -224,10 +206,10 @@ async function signOut({ host }: Pick<AuthConfig, "host">): Promise<void> {
   const ep = endpoints(host);
   const stored = await readStored();
   await clearStored();
-  if (!stored?.auth.id_token) return;
+  if (!stored) return;
   const url = new URL(ep.endSession);
   url.search = new URLSearchParams({
-    id_token_hint: stored?.auth.id_token,
+    id_token_hint: stored.oidc.id_token,
     post_logout_redirect_uri: chrome.identity.getRedirectURL(),
   }).toString();
   try {

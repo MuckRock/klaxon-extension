@@ -1,5 +1,10 @@
 // Pure OIDC/PKCE/OAuth helpers
-import { JwtTokenResponse, OidcTokenResponse, UserInfoResponse } from "./types";
+import {
+  JwtTokenResponse,
+  OidcTokenResponse,
+  StoredAuth,
+  UserInfoResponse,
+} from "./types";
 
 export function base64UrlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -190,4 +195,13 @@ export function hasJwtExpired(token: string, bufferSeconds = 30): boolean {
   } catch {
     return true;
   }
+}
+
+// Shape guard for the StoredAuth record. Used by readStored() to drop
+// legacy `{auth, userinfo}` records (and any other partial/corrupt state)
+// so the service worker only ever sees the three-slot shape it expects.
+export function isValidStoredAuth(value: unknown): value is StoredAuth {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return Boolean(v.oidc) && Boolean(v.jwt) && Boolean(v.userinfo);
 }

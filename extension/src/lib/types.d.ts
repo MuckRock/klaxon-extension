@@ -36,7 +36,7 @@ export interface ValidationError extends Record<string, string[]> {}
  * Stored responses from the Squarelet OIDC endpoints
  */
 
-interface StoredAuth {
+export interface StoredAuth {
   oidc: OidcTokenResponse; // the response from `/openid/token`
   userinfo: UserInfoResponse; // the response from `/openid/userinfo`
   jwt: JwtTokenResponse; // from /api/jwt

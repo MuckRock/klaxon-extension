@@ -38,12 +38,26 @@ In flight on `9-list-alerts`.
 - New tests in [extension/src/lib/tests/oidc.test.ts](../extension/src/lib/tests/oidc.test.ts): full coverage of `endpoints` shape, both fetcher helpers (body + normalization + error path), and `hasJwtExpired` (fresh / past / buffer-cutoff / custom buffer / missing `exp` / malformed). All 22 tests green.
 - Bridge edit in [extension/src/background.ts](../extension/src/background.ts): three mechanical updates (`refreshUserInfoToken` → `refreshJwt`, `ep.refresh` → `ep.jwtRefresh`, `userInfoTokens.access` → `userInfoTokens.access_token`) so the file keeps compiling. Tier-1 refresh is still broken in the same way it was before — step 3's job.
 
-**Step 6 (CLAUDE.md) — done** (in a separate pass earlier in the session; uncommitted).
+**Step 3 (service worker) — done.**
+- Removed the local `interface StoredAuth` from [extension/src/background.ts](../extension/src/background.ts); the type is now imported from [extension/src/lib/types.d.ts](../extension/src/lib/types.d.ts) (which had to be `export`ed).
+- Added `isValidStoredAuth(value): value is StoredAuth` to [extension/src/lib/oidc.ts](../extension/src/lib/oidc.ts) — pure type guard, TDD'd with 11 new tests covering the valid shape, every flavor of partial/falsy/wrong-type input, and the legacy `{auth, userinfo}` shape.
+- `readStored` uses the guard and `clearStored()`s anything that doesn't match — implicit migration for legacy records.
+- `signIn`: after OIDC token exchange + ID-token checks, fans out `getUserInfo` and `exchangeOidcForJwt` in parallel against the same OIDC access token; stores `{ oidc, jwt, userinfo }`.
+- `refreshTokens`: tier 1 = `refreshJwt(ep.jwtRefresh, stored.jwt.refresh_token)`; tier 2 (on tier-1 failure) = refresh OIDC then re-mint JWT + re-fetch userinfo in parallel; both failing → `clearStored()` + return null.
+- `accessToken` returns `stored.jwt.access_token`, gated by `hasJwtExpired`.
+- `signOut` reads `id_token` from `stored.oidc.id_token`.
+- Dropped the verbose `TOKEN RESPONSE` / `USERINFO RESPONSE` / stored/fresh console dumps — they were leaking tokens to console. Boot-time `[klaxon] OAuth redirect URI` log kept.
+
+**Step 6 (CLAUDE.md) — done.**
+
+**Verification (2026-05-12):**
+- `oidc.test.ts`: 33/33 green (11 endpoints + helpers + JWT decode/expiry + 11 shape-guard).
+- Full vitest: 70 pass, 18 fail. The 18 failures pre-date this work — `chrome is not defined` in [extension/src/lib/tests/api.test.ts](../extension/src/lib/tests/api.test.ts) under happy-dom. Out of scope for this refactor.
+- `svelte-check`: [extension/src/background.ts](../extension/src/background.ts) is clean (was 6 errors). Two errors remain at [extension/src/lib/auth.svelte.ts:71](../extension/src/lib/auth.svelte.ts#L71) — exactly what step 4 fixes.
 
 **Still to do:**
-- Step 3 — rework `signIn`, `refreshTokens`, `accessToken`, `signOut`, `readStored` in [extension/src/background.ts](../extension/src/background.ts). Includes renaming the local `StoredAuth.auth` field to `oidc` to match the type. svelte-check currently reports six errors in this file against the trimmed `UserInfoResponse` — they all get fixed here.
-- Step 4 — [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts): `applyStored` reads `stored.userinfo` + computes `expiresAt` from `stored.oidc`.
-- Step 5 — no SW-level tests today; oidc.ts tests cover the helper layer.
+- Step 4 — [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts): `applyStored` reads `expiresAt` from `stored.oidc` instead of `stored.userinfo`. 5-line change; svelte-check then goes green.
+- Step 5 — no SW-level tests today; oidc.ts tests cover the helper layer. End-to-end verification continues via [scratch/test-jwt-flow.sh](../scratch/test-jwt-flow.sh).
 
 ## What changes in this repo
 

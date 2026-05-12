@@ -6,6 +6,7 @@ import {
   endpoints,
   exchangeOidcForJwt,
   hasJwtExpired,
+  isValidStoredAuth,
   pkceChallenge,
   randomBase64Url,
   refreshJwt,
@@ -258,5 +259,59 @@ describe("hasJwtExpired", () => {
   it("returns true on a malformed JWT", () => {
     expect(hasJwtExpired("not.a.jwt")).toBe(true);
     expect(hasJwtExpired("only-one-segment")).toBe(true);
+  });
+});
+
+describe("isValidStoredAuth", () => {
+  const valid = {
+    oidc: {
+      access_token: "a",
+      refresh_token: "r",
+      token_type: "Bearer",
+      id_token: "i",
+      expires_in: 3600,
+      issued_at: 1,
+    },
+    jwt: { access_token: "ja", refresh_token: "jr", issued_at: 2 },
+    userinfo: { sub: "u", uuid: "u", name: "n" },
+  };
+
+  it("returns true for a record with all three slots populated", () => {
+    expect(isValidStoredAuth(valid)).toBe(true);
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty object", {}],
+    ["string", "muckrock_auth"],
+    ["number", 42],
+  ])("returns false for %s", (_label, value) => {
+    expect(isValidStoredAuth(value)).toBe(false);
+  });
+
+  it("returns false when oidc is missing", () => {
+    const { oidc: _oidc, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("returns false when jwt is missing", () => {
+    const { jwt: _jwt, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("returns false when userinfo is missing", () => {
+    const { userinfo: _userinfo, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("rejects the legacy {auth, userinfo} shape so readStored can clear it", () => {
+    const legacy = { auth: valid.oidc, userinfo: valid.userinfo };
+    expect(isValidStoredAuth(legacy)).toBe(false);
+  });
+
+  it("returns false when a slot is present but falsy", () => {
+    expect(isValidStoredAuth({ ...valid, jwt: null })).toBe(false);
+    expect(isValidStoredAuth({ ...valid, oidc: undefined })).toBe(false);
   });
 });
