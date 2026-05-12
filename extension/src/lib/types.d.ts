@@ -37,11 +37,12 @@ export interface ValidationError extends Record<string, string[]> {}
  */
 
 interface StoredAuth {
-  auth: AuthTokenResponse; // the response from `/openid/token`
+  oidc: OidcTokenResponse; // the response from `/openid/token`
   userinfo: UserInfoResponse; // the response from `/openid/userinfo`
+  jwt: JwtTokenResponse; // from /api/jwt
 }
 
-export interface AuthTokenResponse {
+export interface OidcTokenResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
@@ -50,8 +51,14 @@ export interface AuthTokenResponse {
   issued_at: number; // Timestamp for when the token was issued
 }
 
-export interface UserInfoResponse extends AuthTokenResponse {
-  token_type: "bearer"; // This will always be bearer
+// JWT for DocumentCloud access
+export interface JwtTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  issued_at: number; // Timestamp for when the token was issued
+}
+
+export interface UserInfoResponse {
   sub: string; // This is the internal system identifier for the user, or “the subject”. You should use the UUID as the user’s identifier in your application.
   uuid: string; // A unique identifier for the user.
   name: string; // The user’s full name

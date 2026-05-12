@@ -5,7 +5,7 @@
 //   2. Handle OIDC auth messages from the content script (PKCE flow against
 //      Squarelet). All network + storage work lives here because
 //      chrome.identity.launchWebAuthFlow is not available to content scripts.
-import type { AuthTokenResponse, UserInfoResponse } from "./lib/types";
+import type { OidcTokenResponse, UserInfoResponse } from "./lib/types";
 import {
   buildAuthorizeUrl,
   decodeJwtPayload,
@@ -14,7 +14,7 @@ import {
   randomBase64Url,
   getAuthToken,
   getUserInfo,
-  refreshUserInfoToken,
+  refreshJwt,
   hasTokenExpired,
 } from "./lib/oidc.ts";
 
@@ -34,7 +34,7 @@ chrome.action.onClicked.addListener((tab) => {
 const STORAGE_KEY = "muckrock_auth";
 
 interface StoredAuth {
-  auth: AuthTokenResponse; // the response from `/openid/token`
+  auth: OidcTokenResponse; // the response from `/openid/token`
   userinfo: UserInfoResponse; // the response from `/openid/userinfo`
 }
 
@@ -139,17 +139,17 @@ async function refreshTokens({
   const ep = endpoints(host);
   const stored = await readStored();
   let userinfo: UserInfoResponse | undefined = undefined;
-  let auth: AuthTokenResponse | undefined = undefined;
+  let auth: OidcTokenResponse | undefined = undefined;
   try {
     if (!stored?.userinfo.refresh_token)
       throw new Error("No refresh token for userinfo.");
-    // Get fresh tokens for userinfo, from `/api/refresh`
-    const userInfoTokens = await refreshUserInfoToken(
-      ep.refresh,
+    // Get fresh tokens for userinfo, from `/api/refresh/`
+    const userInfoTokens = await refreshJwt(
+      ep.jwtRefresh,
       stored.userinfo.refresh_token,
     );
     // With fresh tokens, we can now refresh data from userinfo
-    userinfo = await getUserInfo(ep.userinfo, userInfoTokens.access);
+    userinfo = await getUserInfo(ep.userinfo, userInfoTokens.access_token);
   } catch (error) {
     console.warn(error);
     // Ok, we failed to get fresh tokens. So let's get fresh user data!

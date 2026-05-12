@@ -19,6 +19,32 @@ That changes the model. The OIDC access token is no longer the bearer for DC API
 
 Access JWT lifetime is 300s; expiry lives in the `exp` claim, not an `expires_in` envelope. End-to-end harness already exists at [scratch/test-jwt-flow.sh](../scratch/test-jwt-flow.sh).
 
+## Progress
+
+In flight on `9-list-alerts`.
+
+**Step 1 (types) — done.**
+- `AuthTokenResponse` renamed to `OidcTokenResponse` at every import.
+- `JwtTokenResponse` added.
+- `StoredAuth` reshaped to `{ oidc, userinfo, jwt }`. **Decision (2026-05-12):** key is `oidc`, not `auth` — matches the endpoint name and disambiguates from the DC JWT once the second tier lands.
+- `UserInfoResponse` no longer `extends` the token type; residual `token_type: "bearer"` stripped.
+
+**Step 2 (oidc.ts helpers) — done, TDD.**
+- Reverted speculative trailing slashes on `authorize`/`token`/`userinfo`/`endSession` (django-oidc-provider defines them without slashes; `APPEND_SLASH` would redirect-and-drop POST bodies). Kept slashes on `/api/jwt/` and `/api/refresh/`.
+- Dropped the dead `refresh` key (replaced by `jwtRefresh`).
+- Added `exchangeOidcForJwt(url, oidcAccessToken)`.
+- Renamed `refreshUserInfoToken` → `refreshJwt` and normalized its return to `{ access_token, refresh_token, issued_at }`.
+- Added `hasJwtExpired(token, bufferSeconds = 30)`.
+- New tests in [extension/src/lib/tests/oidc.test.ts](../extension/src/lib/tests/oidc.test.ts): full coverage of `endpoints` shape, both fetcher helpers (body + normalization + error path), and `hasJwtExpired` (fresh / past / buffer-cutoff / custom buffer / missing `exp` / malformed). All 22 tests green.
+- Bridge edit in [extension/src/background.ts](../extension/src/background.ts): three mechanical updates (`refreshUserInfoToken` → `refreshJwt`, `ep.refresh` → `ep.jwtRefresh`, `userInfoTokens.access` → `userInfoTokens.access_token`) so the file keeps compiling. Tier-1 refresh is still broken in the same way it was before — step 3's job.
+
+**Step 6 (CLAUDE.md) — done** (in a separate pass earlier in the session; uncommitted).
+
+**Still to do:**
+- Step 3 — rework `signIn`, `refreshTokens`, `accessToken`, `signOut`, `readStored` in [extension/src/background.ts](../extension/src/background.ts). Includes renaming the local `StoredAuth.auth` field to `oidc` to match the type. svelte-check currently reports six errors in this file against the trimmed `UserInfoResponse` — they all get fixed here.
+- Step 4 — [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts): `applyStored` reads `stored.userinfo` + computes `expiresAt` from `stored.oidc`.
+- Step 5 — no SW-level tests today; oidc.ts tests cover the helper layer.
+
 ## What changes in this repo
 
 The current branch (`9-list-alerts`, commit `e872ad2`) started toward a two-tier model but was written before the JWT endpoint existed, so the token slots are mis-assigned. The refactor is shaped by what needs to be true after, not by enumerating each existing bug:

@@ -1,5 +1,5 @@
 // Pure OIDC/PKCE/OAuth helpers
-import { AuthTokenResponse, UserInfoResponse } from "./types";
+import { JwtTokenResponse, OidcTokenResponse, UserInfoResponse } from "./types";
 
 export function base64UrlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -37,7 +37,8 @@ export interface OidcEndpoints {
   token: string;
   userinfo: string;
   endSession: string;
-  refresh: string;
+  jwt: string;
+  jwtRefresh: string;
 }
 
 export function endpoints(host: string): OidcEndpoints {
@@ -47,7 +48,8 @@ export function endpoints(host: string): OidcEndpoints {
     token: `${base}/openid/token`,
     userinfo: `${base}/openid/userinfo`,
     endSession: `${base}/openid/end-session`,
-    refresh: `${base}/api/refresh`,
+    jwt: `${base}/api/jwt/`,
+    jwtRefresh: `${base}/api/refresh/`,
   };
 }
 
@@ -87,7 +89,7 @@ export function buildAuthorizeUrl({
 export async function getAuthToken(
   url: string,
   params: URLSearchParams,
-): Promise<AuthTokenResponse> {
+): Promise<OidcTokenResponse> {
   const tokenResp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -98,11 +100,11 @@ export async function getAuthToken(
       `Token exchange failed: ${tokenResp.status} ${await tokenResp.text()}`,
     );
   }
-  const tokenData: AuthTokenResponse = {
-    ...((await tokenResp.json()) as Omit<AuthTokenResponse, "issued_at">),
+  const tokenData: OidcTokenResponse = {
+    ...((await tokenResp.json()) as Omit<OidcTokenResponse, "issued_at">),
     issued_at: Date.now(),
   };
-  return tokenData as AuthTokenResponse;
+  return tokenData as OidcTokenResponse;
 }
 
 export async function getUserInfo(
@@ -124,33 +126,68 @@ export async function getUserInfo(
   return user;
 }
 
-export interface RefreshUserInfoTokenResponse {
-  refresh: string; // The new refresh token
-  access: string; // The new access token
-}
-
-export async function refreshUserInfoToken(
+/**
+ * Exchange a Squarelet OIDC token for a JWT to access DocumentCloud
+ */
+export async function exchangeOidcForJwt(
   url: string,
-  token: string,
-): Promise<RefreshUserInfoTokenResponse> {
-  const refreshResp = await fetch(url, {
+  oidcAccessToken: string,
+): Promise<JwtTokenResponse> {
+  const resp = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ refresh: token }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oidc_token: oidcAccessToken }),
   });
-  if (!refreshResp.ok) {
-    throw new Error(
-      `Failed to refresh userinfo access_token: ${refreshResp.status} ${await refreshResp.text()}`,
-    );
+  if (!resp.ok) {
+    throw new Error(`JWT exchange failed: ${resp.status} ${await resp.text()}`);
   }
-  return refreshResp.json();
+  return {
+    ...((await resp.json()) as Omit<JwtTokenResponse, "issued_at">),
+    issued_at: Date.now(),
+  };
 }
 
-export function hasTokenExpired(tokenObj: AuthTokenResponse): boolean {
+/**
+ * Refresh an access token
+ */
+export async function refreshJwt(
+  url: string,
+  refreshToken: string,
+): Promise<JwtTokenResponse> {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+  if (!resp.ok) {
+    throw new Error(`JWT refresh failed: ${resp.status} ${await resp.text()}`);
+  }
+  const { access, refresh } = (await resp.json()) as {
+    access: string;
+    refresh: string;
+  };
+  return {
+    access_token: access,
+    refresh_token: refresh,
+    issued_at: Date.now(),
+  };
+}
+
+export function hasTokenExpired(tokenObj: OidcTokenResponse): boolean {
   // issuedAt is in milliseconds, expiresIn is in seconds, so normalize to milliseconds
   // apply a 300 second buffer so that we're agressive about refreshing our tokens
   const expiresAt = tokenObj.issued_at + (tokenObj.expires_in - 300) * 1000;
   return Date.now() >= expiresAt;
+}
+
+// JWT lifetime is 300s, so this only buffers a few seconds by default —
+// enough to dodge clock skew without consuming much of the access window.
+export function hasJwtExpired(token: string, bufferSeconds = 30): boolean {
+  try {
+    const { exp } = decodeJwtPayload(token) as { exp?: number };
+    if (typeof exp !== "number") return true;
+    return Date.now() >= (exp - bufferSeconds) * 1000;
+  } catch {
+    return true;
+  }
 }
