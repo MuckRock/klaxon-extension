@@ -17,7 +17,7 @@ That changes the model. The OIDC access token is no longer the bearer for DC API
 | OIDC | `POST /openid/token` | `userinfo`, `/api/jwt/` | `POST /openid/token` w/ `grant_type=refresh_token` |
 | DC JWT | `POST /api/jwt/` | DC API (`Authorization: Bearer`) | `POST /api/refresh/` w/ `{ refresh }` |
 
-Access JWT lifetime is 300s; expiry lives in the `exp` claim, not an `expires_in` envelope. End-to-end harness already exists at [scratch/test-jwt-flow.sh](../scratch/test-jwt-flow.sh).
+Access JWT lifetime is 300s; expiry lives in the `exp` claim, not an `expires_in` envelope. 
 
 ## Progress
 
@@ -48,16 +48,18 @@ In flight on `9-list-alerts`.
 - `signOut` reads `id_token` from `stored.oidc.id_token`.
 - Dropped the verbose `TOKEN RESPONSE` / `USERINFO RESPONSE` / stored/fresh console dumps — they were leaking tokens to console. Boot-time `[klaxon] OAuth redirect URI` log kept.
 
+**Step 4 (sidebar) — done.** [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts) `applyStored` now reads `expiresAt` from `stored.oidc.issued_at + stored.oidc.expires_in * 1000`. Added a one-line comment explaining why the OIDC envelope drives the UI indicator (long-lived; the 5-min JWT is plumbing).
+
+**Step 5 (tests) — settled.** No SW-level tests today; oidc.ts tests cover the helper layer. 
+
 **Step 6 (CLAUDE.md) — done.**
 
 **Verification (2026-05-12):**
-- `oidc.test.ts`: 33/33 green (11 endpoints + helpers + JWT decode/expiry + 11 shape-guard).
+- `oidc.test.ts`: 33/33 green (endpoints + helpers + JWT decode/expiry + 11 shape-guard cases).
 - Full vitest: 70 pass, 18 fail. The 18 failures pre-date this work — `chrome is not defined` in [extension/src/lib/tests/api.test.ts](../extension/src/lib/tests/api.test.ts) under happy-dom. Out of scope for this refactor.
-- `svelte-check`: [extension/src/background.ts](../extension/src/background.ts) is clean (was 6 errors). Two errors remain at [extension/src/lib/auth.svelte.ts:71](../extension/src/lib/auth.svelte.ts#L71) — exactly what step 4 fixes.
+- `svelte-check`: clean. 0 errors, 0 warnings.
 
-**Still to do:**
-- Step 4 — [extension/src/lib/auth.svelte.ts](../extension/src/lib/auth.svelte.ts): `applyStored` reads `expiresAt` from `stored.oidc` instead of `stored.userinfo`. 5-line change; svelte-check then goes green.
-- Step 5 — no SW-level tests today; oidc.ts tests cover the helper layer. End-to-end verification continues via [scratch/test-jwt-flow.sh](../scratch/test-jwt-flow.sh).
+**All implementation steps are done.** Remaining work is manual QA + commit/PR, per the Rollout section below.
 
 ## What changes in this repo
 
@@ -140,7 +142,7 @@ Add cases for the three new helpers:
 - `refreshJwt`: translates `{access, refresh}` → `{access_token, refresh_token}`.
 - `hasJwtExpired`: true for a JWT whose `exp` is in the past; false for a fresh one; true when `bufferSeconds` pushes the cutoff past now; true on malformed input (graceful failure).
 
-No SW-level integration tests (no harness today). End-to-end verification continues via [scratch/test-jwt-flow.sh](../scratch/test-jwt-flow.sh).
+No SW-level integration tests (no harness today). 
 
 ### 6. Docs — [extension/CLAUDE.md](../extension/CLAUDE.md)
 

@@ -163,6 +163,7 @@ describe("exchangeOidcForJwt", () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith("https://x.test/api/jwt/", {
       method: "POST",
+      credentials: "omit",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ oidc_token: "oidc-access" }),
     });
@@ -206,6 +207,7 @@ describe("refreshJwt", () => {
       "https://x.test/api/refresh/",
       {
         method: "POST",
+        credentials: "omit",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: "old-refresh" }),
       },

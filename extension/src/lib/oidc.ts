@@ -140,6 +140,11 @@ export async function exchangeOidcForJwt(
 ): Promise<JwtTokenResponse> {
   const resp = await fetch(url, {
     method: "POST",
+    // Don't send Squarelet's session cookie even if one is present — this is a
+    // public token-exchange endpoint and SessionAuthentication on the server
+    // side would otherwise trigger DRF's CSRF Origin check against
+    // chrome-extension:// (which isn't in CSRF_TRUSTED_ORIGINS).
+    credentials: "omit",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ oidc_token: oidcAccessToken }),
   });
@@ -161,6 +166,7 @@ export async function refreshJwt(
 ): Promise<JwtTokenResponse> {
   const resp = await fetch(url, {
     method: "POST",
+    credentials: "omit", // see exchangeOidcForJwt
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh: refreshToken }),
   });

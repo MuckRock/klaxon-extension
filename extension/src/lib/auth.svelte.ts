@@ -67,8 +67,10 @@ function applyStored(stored: StoredAuth | null) {
   }
   authState.status = "authenticated";
   authState.user = stored.userinfo;
+  // OIDC token drives the session-indicator UI — it's the long-lived
+  // credential. The DC JWT (5 min) refreshes silently in the SW.
   authState.expiresAt =
-    stored.userinfo.issued_at + stored.userinfo.expires_in * 1000;
+    stored.oidc.issued_at + stored.oidc.expires_in * 1000;
   authState.error = null;
 }
 
