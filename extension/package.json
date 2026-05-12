@@ -8,6 +8,7 @@
     "dev:service": "vite build --watch -c vite.config.background.ts",
     "build": "vite build && vite build -c vite.config.background.ts",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
