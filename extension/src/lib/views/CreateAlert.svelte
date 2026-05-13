@@ -55,7 +55,7 @@
       class="back-link"
       onclick={() => {
         onclearselection();
-        router.navigate("home");
+        router.navigate("listAlerts");
       }}
     >
       &#8249; <span>Back</span>
@@ -220,8 +220,8 @@
           />
         </svg>
         <div class="message-content">
-          <strong>Click or tap</strong>
-          <span>on the part of the page you'd like to monitor.</span>
+          <strong>Click, tap or drag</strong>
+          <span>to select the part of the page you'd like to monitor.</span>
         </div>
       </div>
     {/if}

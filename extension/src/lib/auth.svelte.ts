@@ -3,32 +3,16 @@
 // All heavy lifting (PKCE, token exchange, storage) happens in the service
 // worker at static/background.js. This module sends messages to the SW and
 // mirrors the stored auth record into a reactive $state for the UI.
+import type { StoredAuth, UserInfoResponse } from "./types";
 
 const STORAGE_KEY = "muckrock_auth";
 const DEFAULT_SCOPES = "openid profile email uuid organizations";
-
-export interface AuthUser {
-  sub?: string;
-  preferred_username?: string;
-  name?: string;
-  email?: string;
-  [key: string]: unknown;
-}
-
-interface StoredAuth {
-  access_token: string;
-  refresh_token: string;
-  id_token: string;
-  expires_in: number;
-  issued_at: number;
-  user: AuthUser | null;
-}
 
 export type AuthStatus = "idle" | "authenticating" | "authenticated" | "error";
 
 export const authState = $state<{
   status: AuthStatus;
-  user: AuthUser | null;
+  user: UserInfoResponse | null;
   expiresAt: number | null;
   error: string | null;
 }>({
@@ -82,8 +66,11 @@ function applyStored(stored: StoredAuth | null) {
     return;
   }
   authState.status = "authenticated";
-  authState.user = stored.user;
-  authState.expiresAt = stored.issued_at + stored.expires_in * 1000;
+  authState.user = stored.userinfo;
+  // OIDC token drives the session-indicator UI — it's the long-lived
+  // credential. The DC JWT (5 min) refreshes silently in the SW.
+  authState.expiresAt =
+    stored.oidc.issued_at + stored.oidc.expires_in * 1000;
   authState.error = null;
 }
 

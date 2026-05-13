@@ -12,6 +12,7 @@ import type {
   AddOnPayload,
   AddOnSchedule,
   APIResponse,
+  Event,
   KlaxonParams,
   Page,
   Run,
@@ -23,6 +24,43 @@ import { getApiResponse } from "./utils";
 
 const API_URL = import.meta.env.MUCKROCK_DOCUMENTCLOUD_API;
 const KLAXON_ID = import.meta.env.MUCKROCK_KLAXON_ID; // this will change between environments
+
+/**
+ * Route fetch through the service worker to avoid CORS restrictions.
+ * Returns a Response-compatible object so getApiResponse works unchanged.
+ */
+async function swFetch(
+  url: URL,
+  options: RequestInit,
+): Promise<Response | void> {
+  const reply = (await chrome.runtime.sendMessage({
+    type: "api/fetch",
+    url: url.toString(),
+    options: {
+      method: options.method ?? "GET",
+      headers: options.headers,
+      body: options.body,
+    },
+  })) as
+    | {
+        ok: boolean;
+        data?: { status: number; statusText: string; body: unknown };
+        error?: string;
+      }
+    | undefined;
+
+  if (!reply?.ok) {
+    console.warn("SW fetch failed:", reply?.error);
+    return undefined;
+  }
+
+  const { status, statusText, body } = reply.data!;
+  return {
+    status,
+    statusText,
+    json: async () => body,
+  } as Response;
+}
 
 // schedules and eventValues are the inverse of each other, so store them together
 export const schedules: AddOnSchedule[] = [
@@ -61,13 +99,12 @@ export async function history(
     endpoint.searchParams.set("per_page", params.per_page.toString());
   }
 
-  const resp = await fetch(endpoint, {
-    credentials: "omit",
+  const resp = await swFetch(endpoint, {
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
-  }).catch(console.warn);
+  });
 
   return getApiResponse<Page<Run>>(resp);
 }
@@ -95,13 +132,12 @@ export async function scheduled(
     endpoint.searchParams.set("per_page", params.per_page.toString());
   }
 
-  const resp = await fetch(endpoint, {
-    credentials: "omit",
+  const resp = await swFetch(endpoint, {
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
-  }).catch(console.warn);
+  });
 
   return getApiResponse<Page<Event>>(resp);
 }
@@ -126,16 +162,15 @@ export async function dispatch(
     parameters,
   };
 
-  const resp = await fetch(endpoint, {
+  const resp = await swFetch(endpoint, {
     body: JSON.stringify(payload),
-    credentials: "omit",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
       "Content-type": "application/json",
     },
     method: "POST",
-  }).catch(console.warn);
+  });
 
   return getApiResponse<Event, ValidationError>(resp);
 }
@@ -159,16 +194,15 @@ export async function update(
     parameters,
   };
 
-  const resp = await fetch(endpoint, {
+  const resp = await swFetch(endpoint, {
     body: JSON.stringify(payload),
-    credentials: "omit",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
       "Content-type": "application/json",
     },
     method: "PUT",
-  }).catch(console.warn);
+  });
 
   return getApiResponse<Event, ValidationError>(resp);
 }

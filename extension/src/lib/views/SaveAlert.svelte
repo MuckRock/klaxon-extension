@@ -1,6 +1,9 @@
 <script lang="ts">
+  import type { AddOnSchedule } from "../types";
+
   import { getRouter } from "../components/Router.svelte";
   import { getToaster } from "../components/Toaster.svelte";
+  import { dispatch } from "../api";
 
   interface Props {
     selector: string | null;
@@ -14,22 +17,27 @@
   const router = getRouter();
   const toaster = getToaster();
 
-  let frequency = $state("weekly");
-  let name = $state("");
-  let slackWebhook = $state("");
+  let frequency: AddOnSchedule = $state("weekly");
+  let saving = $state(false);
 
-  function handleSave() {
-    console.log("TODO: save alert", {
-      url,
-      selector,
-      matchText,
-      frequency,
-      name,
-      slackWebhook,
+  async function handleSave() {
+    saving = true;
+    const result = await dispatch(frequency, {
+      site: url,
+      selector: selector ?? "",
+      filter_selector: selector ?? undefined,
     });
+    saving = false;
+
+    if (result.error) {
+      console.error("Save alert failed:", result.error);
+      toaster.error(result.error.message ?? "Failed to save alert.");
+      return;
+    }
+
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate("home");
+    router.navigate("listAlerts");
   }
 </script>
 
@@ -58,9 +66,9 @@
       >
       <div class="select-wrapper">
         <select id="frequency" bind:value={frequency}>
+          <option value="hourly">Hourly</option>
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
         </select>
       </div>
     </div>
@@ -75,12 +83,7 @@
           this webpage.)
         </p>
       </div>
-      <input
-        id="alert-name"
-        type="text"
-        placeholder={document.title}
-        bind:value={name}
-      />
+      <input id="alert-name" type="text" placeholder="TODO" disabled />
     </div>
 
     <div class="field">
@@ -96,11 +99,13 @@
           > to enable Slack notifications.
         </p>
       </div>
-      <input id="slack-webhook" type="url" bind:value={slackWebhook} />
+      <input id="slack-webhook" type="url" placeholder="TODO" disabled />
     </div>
   </main>
   <footer class="button-row">
-    <button class="btn-primary" onclick={handleSave}>Save alert</button>
+    <button class="btn-primary" onclick={handleSave} disabled={saving}>
+      {saving ? "Saving…" : "Save alert"}
+    </button>
   </footer>
 </div>
 

@@ -1,7 +1,7 @@
 <script module>
   // To add a new view to the router,
   // register it within the View type.
-  type View = "home" | "createAlert" | "saveAlert";
+  type View = "listAlerts" | "createAlert" | "saveAlert";
 
   interface Router {
     view: View;

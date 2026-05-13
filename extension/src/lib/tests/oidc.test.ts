@@ -1,13 +1,27 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   base64UrlEncode,
   buildAuthorizeUrl,
   decodeJwtPayload,
   endpoints,
+  exchangeOidcForJwt,
+  hasJwtExpired,
+  isValidStoredAuth,
   pkceChallenge,
   randomBase64Url,
+  refreshJwt,
   sha256,
 } from "../oidc.ts";
+
+// Build a syntactically valid JWT with the given payload. The signature is
+// a placeholder — these tests only exercise decode/expiry, never verification.
+function makeJwt(payload: Record<string, unknown>): string {
+  const b64url = (s: string) =>
+    btoa(s).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = b64url(JSON.stringify(payload));
+  return `${header}.${body}.sig`;
+}
 
 describe("base64UrlEncode", () => {
   it("encodes bytes using the URL-safe alphabet without padding", () => {
@@ -69,14 +83,20 @@ describe("endpoints", () => {
     );
   });
 
-  it("builds all four endpoints from a host", () => {
+  it("builds OIDC endpoints without trailing slashes (django-oidc-provider uses bare paths)", () => {
     const ep = endpoints("https://accounts.muckrock.com");
-    expect(ep).toEqual({
-      authorize: "https://accounts.muckrock.com/openid/authorize",
-      token: "https://accounts.muckrock.com/openid/token",
-      userinfo: "https://accounts.muckrock.com/openid/userinfo",
-      endSession: "https://accounts.muckrock.com/openid/end-session",
-    });
+    expect(ep.authorize).toBe("https://accounts.muckrock.com/openid/authorize");
+    expect(ep.token).toBe("https://accounts.muckrock.com/openid/token");
+    expect(ep.userinfo).toBe("https://accounts.muckrock.com/openid/userinfo");
+    expect(ep.endSession).toBe(
+      "https://accounts.muckrock.com/openid/end-session",
+    );
+  });
+
+  it("builds DRF endpoints with trailing slashes (Django APPEND_SLASH drops POST bodies)", () => {
+    const ep = endpoints("https://accounts.muckrock.com");
+    expect(ep.jwt).toBe("https://accounts.muckrock.com/api/jwt/");
+    expect(ep.jwtRefresh).toBe("https://accounts.muckrock.com/api/refresh/");
   });
 });
 
@@ -118,5 +138,182 @@ describe("buildAuthorizeUrl", () => {
       codeChallenge: "c",
     });
     expect(new URL(url).searchParams.has("client_secret")).toBe(false);
+  });
+});
+
+describe("exchangeOidcForJwt", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("POSTs JSON { oidc_token } and returns the JWT pair with issued_at", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "jwt-a", refresh_token: "jwt-r" }),
+    });
+    const before = Date.now();
+    const result = await exchangeOidcForJwt(
+      "https://x.test/api/jwt/",
+      "oidc-access",
+    );
+    const after = Date.now();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith("https://x.test/api/jwt/", {
+      method: "POST",
+      credentials: "omit",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oidc_token: "oidc-access" }),
+    });
+    expect(result.access_token).toBe("jwt-a");
+    expect(result.refresh_token).toBe("jwt-r");
+    expect(result.issued_at).toBeGreaterThanOrEqual(before);
+    expect(result.issued_at).toBeLessThanOrEqual(after);
+  });
+
+  it("throws with the response body on non-2xx", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () => '{"error":"invalid token"}',
+    });
+    await expect(
+      exchangeOidcForJwt("https://x.test/api/jwt/", "bad"),
+    ).rejects.toThrow(/400.*invalid token/);
+  });
+});
+
+describe("refreshJwt", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("POSTs { refresh } and normalizes { access, refresh } to long-name fields", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access: "new-a", refresh: "new-r" }),
+    });
+    const result = await refreshJwt(
+      "https://x.test/api/refresh/",
+      "old-refresh",
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://x.test/api/refresh/",
+      {
+        method: "POST",
+        credentials: "omit",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh: "old-refresh" }),
+      },
+    );
+    expect(result.access_token).toBe("new-a");
+    expect(result.refresh_token).toBe("new-r");
+    expect(typeof result.issued_at).toBe("number");
+  });
+
+  it("throws on non-2xx", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: async () => '{"detail":"Token is invalid or expired"}',
+    });
+    await expect(
+      refreshJwt("https://x.test/api/refresh/", "expired"),
+    ).rejects.toThrow(/401/);
+  });
+});
+
+describe("hasJwtExpired", () => {
+  const now = () => Math.floor(Date.now() / 1000);
+
+  it("returns false for a fresh JWT well beyond the buffer", () => {
+    const jwt = makeJwt({ exp: now() + 600 }); // 10 min out
+    expect(hasJwtExpired(jwt)).toBe(false);
+  });
+
+  it("returns true for a JWT whose exp is in the past", () => {
+    const jwt = makeJwt({ exp: now() - 60 });
+    expect(hasJwtExpired(jwt)).toBe(true);
+  });
+
+  it("returns true when the buffer pushes the cutoff past now", () => {
+    // exp 20s out, default buffer 30s → cutoff is 10s in the past → expired
+    const jwt = makeJwt({ exp: now() + 20 });
+    expect(hasJwtExpired(jwt)).toBe(true);
+  });
+
+  it("respects a custom bufferSeconds argument", () => {
+    const jwt = makeJwt({ exp: now() + 20 });
+    expect(hasJwtExpired(jwt, 5)).toBe(false);
+  });
+
+  it("returns true when the exp claim is missing", () => {
+    const jwt = makeJwt({ sub: "abc" });
+    expect(hasJwtExpired(jwt)).toBe(true);
+  });
+
+  it("returns true on a malformed JWT", () => {
+    expect(hasJwtExpired("not.a.jwt")).toBe(true);
+    expect(hasJwtExpired("only-one-segment")).toBe(true);
+  });
+});
+
+describe("isValidStoredAuth", () => {
+  const valid = {
+    oidc: {
+      access_token: "a",
+      refresh_token: "r",
+      token_type: "Bearer",
+      id_token: "i",
+      expires_in: 3600,
+      issued_at: 1,
+    },
+    jwt: { access_token: "ja", refresh_token: "jr", issued_at: 2 },
+    userinfo: { sub: "u", uuid: "u", name: "n" },
+  };
+
+  it("returns true for a record with all three slots populated", () => {
+    expect(isValidStoredAuth(valid)).toBe(true);
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty object", {}],
+    ["string", "muckrock_auth"],
+    ["number", 42],
+  ])("returns false for %s", (_label, value) => {
+    expect(isValidStoredAuth(value)).toBe(false);
+  });
+
+  it("returns false when oidc is missing", () => {
+    const { oidc: _oidc, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("returns false when jwt is missing", () => {
+    const { jwt: _jwt, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("returns false when userinfo is missing", () => {
+    const { userinfo: _userinfo, ...partial } = valid;
+    expect(isValidStoredAuth(partial)).toBe(false);
+  });
+
+  it("rejects the legacy {auth, userinfo} shape so readStored can clear it", () => {
+    const legacy = { auth: valid.oidc, userinfo: valid.userinfo };
+    expect(isValidStoredAuth(legacy)).toBe(false);
+  });
+
+  it("returns false when a slot is present but falsy", () => {
+    expect(isValidStoredAuth({ ...valid, jwt: null })).toBe(false);
+    expect(isValidStoredAuth({ ...valid, oidc: undefined })).toBe(false);
   });
 });

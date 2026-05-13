@@ -178,6 +178,13 @@ export const eventsList: Page<Event> = {
   ],
 };
 
+export const emptyEventsList: Page<Event> = {
+  count: 0,
+  next: null,
+  previous: null,
+  results: [],
+};
+
 export const scheduled: Page<Event> = {
   next: null,
   previous: null,
