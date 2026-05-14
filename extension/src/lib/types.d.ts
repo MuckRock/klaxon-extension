@@ -58,6 +58,23 @@ export interface JwtTokenResponse {
   issued_at: number; // Timestamp for when the token was issued
 }
 
+export interface AuthConfig {
+  host: string;
+  clientId: string;
+  scopes: string;
+}
+
+export interface AuthMessage {
+  type: string;
+  config: AuthConfig;
+}
+
+export interface FetchMessage {
+  type: "api/fetch";
+  url: string;
+  options: RequestInit;
+}
+
 export interface UserInfoResponse {
   sub: string; // This is the internal system identifier for the user, or “the subject”. You should use the UUID as the user’s identifier in your application.
   uuid: string; // A unique identifier for the user.
@@ -244,9 +261,9 @@ export interface Event {
   id: number;
   addon: AddOn | number;
   user: number;
-  parameters: any;
+  parameters: KlaxonParams;
   event: number;
-  scratch: any;
+  scratch: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -257,6 +274,8 @@ export interface KlaxonParams {
   site: string;
   selector: string;
   filter_selector?: string;
+  title?: string;
+  slack_webhook?: string;
 }
 
 // payload for creating or scheduling an add-on run

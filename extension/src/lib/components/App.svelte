@@ -60,6 +60,7 @@
 
   function handleRouteChange(view: string) {
     canvas.active = view === "createAlert";
+    loadData();
   }
 
   onDestroy(() => canvas.destroy());

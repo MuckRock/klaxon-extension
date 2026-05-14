@@ -8,6 +8,8 @@
 
   import { getRouter } from "../components/Router.svelte";
 
+  import { isEvent } from "../utils";
+
   interface Props {
     events: Page<Event>;
     runs: Page<Run>;
@@ -21,14 +23,12 @@
 
   function getSiteLabel(run: Run): string {
     const event = run.event;
-    if (event && typeof event === "object" && event.parameters?.site) {
-      try {
-        return new URL(event.parameters.site).hostname;
-      } catch {
-        return event.parameters.site;
-      }
+
+    if (!isEvent(event)) {
+      return "Unknown site";
     }
-    return "Unknown site";
+
+    return event.parameters.title || event.parameters.site;
   }
 
   const recentRuns = $derived(runs.results.slice(0, 6));
@@ -44,11 +44,11 @@
       {:else}
         <div class="alerts-body">
           <p class="summary">
-            You have <strong
-              >{events.results.length} alert{events.results.length === 1
+            You have <strong>
+              {events.results.length} alert{events.results.length === 1
                 ? ""
-                : "s"}</strong
-            >
+                : "s"}
+            </strong>
             for this page. Here are the most recent changes:
           </p>
 

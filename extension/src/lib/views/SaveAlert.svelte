@@ -51,9 +51,9 @@
     <div class="intro">
       <h3>Save alert</h3>
       <p class="description">
-        This alert will watch <strong
-          >{selector ? "part of the page" : "the entire page"}</strong
-        > for changes.
+        This alert will watch <strong>
+          {selector ? "part of the page" : "the entire page"}
+        </strong> for changes.
       </p>
       <p class="description">
         We just need a bit more info to save your alert.
@@ -61,11 +61,11 @@
     </div>
 
     <div class="field">
-      <label class="field-label" for="frequency"
-        >How often should Klaxon check this page?</label
-      >
+      <label class="field-label" for="frequency">
+        How often should Klaxon check this page?
+      </label>
       <div class="select-wrapper">
-        <select id="frequency" bind:value={frequency}>
+        <select id="frequency" bind:value={frequency} name="schedule">
           <option value="hourly">Hourly</option>
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
@@ -75,31 +75,38 @@
 
     <div class="field">
       <div class="field-header">
-        <label class="field-label" for="alert-name"
-          >Name this alert (optional):</label
-        >
+        <label class="field-label" for="alert-name">
+          Name this alert (optional):
+        </label>
         <p class="field-hint">
           Give this alert a custom name. (By default, we'll use the title of
           this webpage.)
         </p>
       </div>
-      <input id="alert-name" type="text" placeholder="TODO" disabled />
+      <input id="alert-name" type="text" placeholder="Title" name="title" />
     </div>
 
     <div class="field">
       <div class="field-header">
-        <label class="field-label" for="slack-webhook"
-          >Slack Webhook (optional):</label
-        >
+        <label class="field-label" for="slack-webhook">
+          Slack Webhook (optional):
+        </label>
         <p class="field-hint">
           Enter a <a
             href="https://api.slack.com/messaging/webhooks"
             target="_blank"
-            rel="noopener noreferrer">Slack Webhook URL</a
-          > to enable Slack notifications.
+            rel="noopener noreferrer"
+          >
+            Slack Webhook URL
+          </a> to enable Slack notifications.
         </p>
       </div>
-      <input id="slack-webhook" type="url" placeholder="TODO" disabled />
+      <input
+        id="slack-webhook"
+        type="url"
+        placeholder="Webhook URL"
+        name="slack_webhook"
+      />
     </div>
   </main>
   <footer class="button-row">

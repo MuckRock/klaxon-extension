@@ -13,6 +13,7 @@ import type {
   AddOnSchedule,
   APIResponse,
   Event,
+  FetchMessage,
   KlaxonParams,
   Page,
   Run,
@@ -33,15 +34,17 @@ async function swFetch(
   url: URL,
   options: RequestInit,
 ): Promise<Response | void> {
-  const reply = (await chrome.runtime.sendMessage({
+  const msg: FetchMessage = {
     type: "api/fetch",
     url: url.toString(),
     options: {
       method: options.method ?? "GET",
       headers: options.headers,
       body: options.body,
+      credentials: options.credentials ?? "omit", // sending cookies triggers CSRF, so "omit"
     },
-  })) as
+  };
+  const reply = (await chrome.runtime.sendMessage(msg)) as
     | {
         ok: boolean;
         data?: { status: number; statusText: string; body: unknown };
@@ -90,7 +93,10 @@ export async function history(
   if (!token) {
     return { error: { status: 401, message: "Not authenticated" } };
   }
-  const endpoint = new URL(`addon_runs/?addon=${KLAXON_ID}`, API_URL);
+  const endpoint = new URL(
+    `addon_runs/?expand=addon,event&addon=${KLAXON_ID}`,
+    API_URL,
+  );
   endpoint.searchParams.set("site", site);
   if (params.cursor) {
     endpoint.searchParams.set("cursor", params.cursor);
