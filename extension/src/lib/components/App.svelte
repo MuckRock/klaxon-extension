@@ -1,17 +1,20 @@
 <script lang="ts">
+  import type { Page, Event, Run } from "../types";
+
   import { onDestroy, untrack } from "svelte";
+
+  import CreateAlert from "../views/CreateAlert.svelte";
+  import Header from "./Header.svelte";
+  import ListAlerts from "../views/ListAlerts.svelte";
+  import Router from "./Router.svelte";
+  import SaveAlert from "../views/SaveAlert.svelte";
+  import Toaster from "./Toaster.svelte";
+  import ToastList from "./ToastList.svelte";
+
   import { initCanvas, type Canvas } from "../canvas.svelte.ts";
   import { getCanonicalURL } from "../url";
   import { authState } from "../auth.svelte.ts";
   import { scheduled, history } from "../api";
-  import type { Page, Event, Run } from "../types";
-  import ListAlerts from "../views/ListAlerts.svelte";
-  import CreateAlert from "../views/CreateAlert.svelte";
-  import SaveAlert from "../views/SaveAlert.svelte";
-  import Router from "./Router.svelte";
-  import Toaster from "./Toaster.svelte";
-  import ToastList from "./ToastList.svelte";
-  import Header from "./Header.svelte";
 
   interface Props {
     host: HTMLElement;
@@ -29,11 +32,13 @@
   );
   const url = getCanonicalURL();
 
-  const emptyPage = <T,>(): Page<T> => ({
-    next: null,
-    previous: null,
-    results: [],
-  });
+  function emptyPage<T>(): Page<T> {
+    return {
+      next: null,
+      previous: null,
+      results: [],
+    };
+  }
 
   let events: Page<Event> = $state(emptyPage());
   let runs: Page<Run> = $state(emptyPage());
