@@ -1,32 +1,65 @@
 <script lang="ts">
-  import type { AddOnSchedule } from "../types";
+  import type {
+    AddOnSchedule,
+    APIResponse,
+    Event,
+    KlaxonParams,
+    ValidationError,
+  } from "../types";
 
   import { getRouter } from "../components/Router.svelte";
   import { getToaster } from "../components/Toaster.svelte";
-  import { dispatch } from "../api";
+  import { dispatch, schedules, update } from "../api";
 
   interface Props {
+    event?: Event;
     selector: string | null;
     matchText: string | null;
     url: string;
     onsave: () => void;
   }
 
-  let { selector, matchText, url, onsave }: Props = $props();
+  let { event, selector: _selector, url: _url, onsave }: Props = $props();
+
+  let form: HTMLFormElement | undefined = $state();
+
+  let selector = $derived(event?.parameters.selector ?? _selector);
+  let url = $derived(event?.parameters.site ?? _url);
 
   const router = getRouter();
   const toaster = getToaster();
 
-  let frequency: AddOnSchedule = $state("weekly");
+  let frequency: AddOnSchedule = $derived.by(() => {
+    if (event) {
+      return schedules[event.event] ?? "weekly";
+    }
+
+    return "weekly";
+  });
   let saving = $state(false);
 
   async function handleSave() {
     saving = true;
-    const result = await dispatch(frequency, {
+
+    const fd = new FormData(form);
+    const params: KlaxonParams = {
+      title: fd.get("title") as string,
+      slack_webhook: fd.get("slack_webhook") as string,
       site: url,
       selector: selector ?? "",
-      filter_selector: selector ?? undefined,
-    });
+      // not setting this yet
+      // filter_selector: selector ?? undefined,
+    };
+
+    let result: APIResponse<Event, ValidationError>;
+    if (event) {
+      // update
+      result = await update(event.id, frequency, params);
+    } else {
+      // create
+      result = await dispatch(frequency, params);
+    }
+
     saving = false;
 
     if (result.error) {
@@ -41,9 +74,20 @@
   }
 </script>
 
-<div class="container save-alert">
+<form
+  bind:this={form}
+  class="container save-alert"
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSave();
+  }}
+>
   <header>
-    <button class="back-link" onclick={() => router.navigate("createAlert")}>
+    <button
+      class="back-link"
+      type="button"
+      onclick={() => router.navigate("createAlert", { event })}
+    >
       &#8249; <span>Back</span>
     </button>
   </header>
@@ -60,6 +104,7 @@
       </p>
     </div>
 
+    <!-- schedule -->
     <div class="field">
       <label class="field-label" for="frequency">
         How often should Klaxon check this page?
@@ -73,6 +118,7 @@
       </div>
     </div>
 
+    <!-- title -->
     <div class="field">
       <div class="field-header">
         <label class="field-label" for="alert-name">
@@ -83,9 +129,16 @@
           this webpage.)
         </p>
       </div>
-      <input id="alert-name" type="text" placeholder="Title" name="title" />
+      <input
+        id="alert-name"
+        type="text"
+        placeholder="Title"
+        name="title"
+        value={event?.parameters.title}
+      />
     </div>
 
+    <!-- slack webhook -->
     <div class="field">
       <div class="field-header">
         <label class="field-label" for="slack-webhook">
@@ -106,15 +159,16 @@
         type="url"
         placeholder="Webhook URL"
         name="slack_webhook"
+        value={event?.parameters.slack_webhook}
       />
     </div>
   </main>
   <footer class="button-row">
-    <button class="btn-primary" onclick={handleSave} disabled={saving}>
+    <button class="btn-primary" type="submit" disabled={saving}>
       {saving ? "Saving…" : "Save alert"}
     </button>
   </footer>
-</div>
+</form>
 
 <style>
   .container {

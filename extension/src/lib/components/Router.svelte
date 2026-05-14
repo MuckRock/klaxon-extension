@@ -7,7 +7,8 @@
 
   interface Router {
     view: View;
-    navigate(v: View): void;
+    props: any; // pass props to view components
+    navigate(v: View, props?: any): void;
   }
 
   export const [getRouter, setRouter] = createContext<Router>();
@@ -27,10 +28,13 @@
   let currentView = $state<View>(untrack(() => initialView));
 
   const router: Router = {
+    props: {},
+
     get view() {
       return currentView;
     },
-    navigate(v: View) {
+    navigate(v: View, props?: any) {
+      this.props = props;
       currentView = v;
       onchange?.(v);
     },

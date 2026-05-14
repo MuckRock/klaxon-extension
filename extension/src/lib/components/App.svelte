@@ -75,7 +75,7 @@
         <div class="body">
           <ToastList />
           {#if router.view === "listAlerts"}
-            <ListAlerts {events} {runs} />
+            <ListAlerts {events} {runs} {...router.props} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               locked={canvas.state.locked}
@@ -83,6 +83,7 @@
               matchText={canvas.state.matchText}
               onselectorchange={(css) => canvas.setSelector(css)}
               onclearselection={() => canvas.clearSelection()}
+              {...router.props}
             />
           {:else if router.view === "saveAlert"}
             <SaveAlert
@@ -90,6 +91,7 @@
               matchText={canvas.state.matchText}
               {url}
               onsave={() => canvas.clearSelection()}
+              {...router.props}
             />
           {/if}
         </div>

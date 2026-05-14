@@ -207,7 +207,7 @@ export async function update(
       Authorization: `Bearer ${token}`,
       "Content-type": "application/json",
     },
-    method: "PUT",
+    method: "PATCH",
   });
 
   return getApiResponse<Event, ValidationError>(resp);

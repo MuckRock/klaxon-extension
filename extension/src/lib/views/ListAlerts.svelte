@@ -55,22 +55,28 @@
           <div class="table">
             {#each recentRuns as run (run.uuid)}
               <div class="table-row">
-                <p class="row-title">{getSiteLabel(run)}</p>
-                <div class="row-meta">
-                  <span class="changed"
-                    >Changed: <RelativeTime
-                      date={new Date(run.updated_at)}
-                    /></span
+                <p class="row-title">
+                  <button
+                    class="link"
+                    onclick={() =>
+                      router.navigate("saveAlert", { event: run.event })}
                   >
+                    {getSiteLabel(run)}
+                  </button>
+                </p>
+                <div class="row-meta">
+                  <span class="changed">
+                    Changed: <RelativeTime date={new Date(run.updated_at)} />
+                  </span>
                   <button class="view-changes">View changes</button>
                 </div>
               </div>
             {/each}
           </div>
 
-          <button class="view-all"
-            >View all your alerts for this page &#187;</button
-          >
+          <button class="view-all">
+            View all your alerts for this page &#187;
+          </button>
         </div>
       {/if}
     </Welcome>
@@ -139,7 +145,19 @@
 
   .summary strong {
     color: #c41a4d;
+  }
+
+  button.link {
+    border: none;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    cursor: pointer;
+    color: #c41a4d;
     text-decoration: underline;
+    font-weight: bold;
   }
 
   .table {
