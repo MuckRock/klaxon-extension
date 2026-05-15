@@ -62,7 +62,7 @@ Pure DOM → structured-selector logic, no Svelte. Builds `StructuredSelector` (
 - `App.svelte` — initializes the canvas with `untrack`'d host/shadow refs (one-shot init, not reactive on prop change), renders `Header` + the current view, destroys canvas on unmount. The `{#if router.view === ...}` ladder lives here — add new views to both this ladder and the `View` literal union in `Router.svelte`.
 - `Header.svelte` — top bar with the Sign in/Sign out button and (when authenticated) the navigation between alert views. Reads `authState` directly.
 - `Welcome.svelte` — wraps authenticated views, showing a sign-in CTA when `authState.status !== "authenticated"` and the view's content otherwise.
-- `Router.svelte` — tiny context-based router. `setContext("router", ...)` exposes `{ view, navigate }`; consumer code calls `getRouter()`. View names are a literal union (`View`).
+- `Router.svelte` — tiny context-based router. `setRouter(router)` exposes `{ view, navigate }`; consumer code calls `getRouter()`. View names are a literal union (`View`).
 - `Toaster.svelte` / `ToastList.svelte` — same context pattern, `getToaster()` returns `{ success, error, dismiss }`. Errors are sticky; successes auto-dismiss after 5s.
 - `ApertureBar.svelte` — ancestor-walker UI for the picker (driven by `canvas.state`).
 - `RelativeTime.svelte` — small helper for human-readable timestamps.

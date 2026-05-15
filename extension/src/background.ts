@@ -5,7 +5,12 @@
 //   2. Handle OIDC auth messages from the content script (PKCE flow against
 //      Squarelet). All network + storage work lives here because
 //      chrome.identity.launchWebAuthFlow is not available to content scripts.
-import type { StoredAuth } from "./lib/types";
+import type {
+  AuthConfig,
+  AuthMessage,
+  FetchMessage,
+  StoredAuth,
+} from "./lib/types";
 import {
   buildAuthorizeUrl,
   decodeJwtPayload,
@@ -54,12 +59,6 @@ async function writeStored(data: StoredAuth): Promise<void> {
 
 async function clearStored(): Promise<void> {
   await chrome.storage.local.remove(STORAGE_KEY);
-}
-
-interface AuthConfig {
-  host: string;
-  clientId: string;
-  scopes: string;
 }
 
 async function signIn({
@@ -222,19 +221,8 @@ async function signOut({ host }: Pick<AuthConfig, "host">): Promise<void> {
   }
 }
 
-interface AuthMessage {
-  type: string;
-  config: AuthConfig;
-}
-
 function isAuthMessage(t: AuthMessage | FetchMessage): t is AuthMessage {
   return t.type.startsWith("auth/");
-}
-
-interface FetchMessage {
-  type: "api/fetch";
-  url: string;
-  options: RequestInit;
 }
 
 function isFetchMessage(t: AuthMessage | FetchMessage): t is FetchMessage {

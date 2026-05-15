@@ -8,6 +8,8 @@
 
   import { getRouter } from "../components/Router.svelte";
 
+  import { isEvent } from "../utils";
+
   interface Props {
     events: Page<Event>;
     runs: Page<Run>;
@@ -21,14 +23,12 @@
 
   function getSiteLabel(run: Run): string {
     const event = run.event;
-    if (event && typeof event === "object" && event.parameters?.site) {
-      try {
-        return new URL(event.parameters.site).hostname;
-      } catch {
-        return event.parameters.site;
-      }
+
+    if (!isEvent(event)) {
+      return "Unknown site";
     }
-    return "Unknown site";
+
+    return event.parameters.title || event.parameters.site;
   }
 
   const recentRuns = $derived(runs.results.slice(0, 6));
@@ -44,33 +44,39 @@
       {:else}
         <div class="alerts-body">
           <p class="summary">
-            You have <strong
-              >{events.results.length} alert{events.results.length === 1
+            You have <strong>
+              {events.results.length} alert{events.results.length === 1
                 ? ""
-                : "s"}</strong
-            >
+                : "s"}
+            </strong>
             for this page. Here are the most recent changes:
           </p>
 
           <div class="table">
             {#each recentRuns as run (run.uuid)}
               <div class="table-row">
-                <p class="row-title">{getSiteLabel(run)}</p>
-                <div class="row-meta">
-                  <span class="changed"
-                    >Changed: <RelativeTime
-                      date={new Date(run.updated_at)}
-                    /></span
+                <p class="row-title">
+                  <button
+                    class="link"
+                    onclick={() =>
+                      router.navigate("editAlert", { event: run.event })}
                   >
+                    {getSiteLabel(run)}
+                  </button>
+                </p>
+                <div class="row-meta">
+                  <span class="changed">
+                    Changed: <RelativeTime date={new Date(run.updated_at)} />
+                  </span>
                   <button class="view-changes">View changes</button>
                 </div>
               </div>
             {/each}
           </div>
 
-          <button class="view-all"
-            >View all your alerts for this page &#187;</button
-          >
+          <button class="view-all">
+            View all your alerts for this page &#187;
+          </button>
         </div>
       {/if}
     </Welcome>
@@ -139,7 +145,19 @@
 
   .summary strong {
     color: #c41a4d;
+  }
+
+  button.link {
+    border: none;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    cursor: pointer;
+    color: #c41a4d;
     text-decoration: underline;
+    font-weight: bold;
   }
 
   .table {

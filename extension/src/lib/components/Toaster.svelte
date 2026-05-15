@@ -1,4 +1,6 @@
 <script module>
+  import { createContext } from "svelte";
+
   interface Toast {
     id: number;
     type: "success" | "error";
@@ -12,13 +14,11 @@
     dismiss(id: number): void;
   }
 
-  export function getToaster() {
-    return getContext<Toaster>("toaster");
-  }
+  export const [getToaster, setToaster] = createContext<Toaster>();
 </script>
 
 <script lang="ts">
-  import { type Snippet, getContext, setContext, onDestroy } from "svelte";
+  import { type Snippet, onDestroy } from "svelte";
 
   interface Props {
     children: Snippet;
@@ -60,7 +60,7 @@
     dismiss,
   };
 
-  setContext<Toaster>("toaster", toaster);
+  setToaster(toaster);
 
   onDestroy(() => {
     for (const timer of timers.values()) {

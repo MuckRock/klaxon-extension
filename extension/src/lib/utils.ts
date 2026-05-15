@@ -1,4 +1,4 @@
-import type { APIResponse, NumericRange } from "./types";
+import type { APIResponse, NumericRange, Event, Run } from "./types";
 
 /**
  * Handle what comes back from the API and return either data or errors.
@@ -81,4 +81,10 @@ export function isRedirectCode(
   status: number,
 ): status is NumericRange<300, 308> {
   return status >= 300 && status <= 308;
+}
+
+export function isEvent(
+  event: Event | number | null | undefined,
+): event is Event {
+  return Boolean(event) && typeof event === "object";
 }
