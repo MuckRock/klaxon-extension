@@ -59,7 +59,7 @@
                   <button
                     class="link"
                     onclick={() =>
-                      router.navigate("saveAlert", { event: run.event })}
+                      router.navigate("editAlert", { event: run.event })}
                   >
                     {getSiteLabel(run)}
                   </button>

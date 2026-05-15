@@ -9,23 +9,23 @@
 
   import { getRouter } from "../components/Router.svelte";
   import { getToaster } from "../components/Toaster.svelte";
-  import { dispatch } from "../api";
+  import { schedules, update } from "../api";
 
   interface Props {
-    selector: string | null;
-    matchText: string | null;
-    url: string;
+    event: Event;
     onsave: () => void;
   }
 
-  let { selector, url, onsave }: Props = $props();
+  let { event, onsave }: Props = $props();
 
   let form: HTMLFormElement | undefined = $state();
+
+  let selector = $derived(event.parameters.selector);
 
   const router = getRouter();
   const toaster = getToaster();
 
-  let frequency: AddOnSchedule = $state("weekly");
+  let frequency: AddOnSchedule = $derived(schedules[event.event] ?? "weekly");
   let saving = $state(false);
 
   async function handleSave() {
@@ -33,13 +33,13 @@
 
     const fd = new FormData(form);
     const params: KlaxonParams = {
+      ...event.parameters,
       title: fd.get("title") as string,
       slack_webhook: fd.get("slack_webhook") as string,
-      site: url,
-      selector: selector ?? "",
     };
 
-    const result: APIResponse<Event, ValidationError> = await dispatch(
+    const result: APIResponse<Event, ValidationError> = await update(
+      event.id,
       frequency,
       params,
     );
@@ -70,21 +70,18 @@
     <button
       class="back-link"
       type="button"
-      onclick={() => router.navigate("createAlert")}
+      onclick={() => router.navigate("listAlerts")}
     >
       &#8249; <span>Back</span>
     </button>
   </header>
   <main class="section content">
     <div class="intro">
-      <h3>Save alert</h3>
+      <h3>Edit alert</h3>
       <p class="description">
-        This alert will watch <strong>
+        This alert is watching <strong>
           {selector ? "part of the page" : "the entire page"}
         </strong> for changes.
-      </p>
-      <p class="description">
-        We just need a bit more info to save your alert.
       </p>
     </div>
 
@@ -113,7 +110,13 @@
           this webpage.)
         </p>
       </div>
-      <input id="alert-name" type="text" placeholder="Title" name="title" />
+      <input
+        id="alert-name"
+        type="text"
+        placeholder="Title"
+        name="title"
+        value={event.parameters.title ?? ""}
+      />
     </div>
 
     <!-- slack webhook -->
@@ -137,12 +140,13 @@
         type="url"
         placeholder="Webhook URL"
         name="slack_webhook"
+        value={event.parameters.slack_webhook ?? ""}
       />
     </div>
   </main>
   <footer class="button-row">
     <button class="btn-primary" type="submit" disabled={saving}>
-      {saving ? "Saving…" : "Save alert"}
+      {saving ? "Saving…" : "Update alert"}
     </button>
   </footer>
 </form>

@@ -3,7 +3,7 @@
 
   // To add a new view to the router,
   // register it within the View type.
-  type View = "listAlerts" | "createAlert" | "saveAlert";
+  type View = "listAlerts" | "createAlert" | "saveAlert" | "editAlert";
 
   interface Router {
     view: View;

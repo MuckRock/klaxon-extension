@@ -4,6 +4,7 @@
   import { onDestroy, untrack } from "svelte";
 
   import CreateAlert from "../views/CreateAlert.svelte";
+  import EditAlert from "../views/EditAlert.svelte";
   import Header from "./Header.svelte";
   import ListAlerts from "../views/ListAlerts.svelte";
   import Router from "./Router.svelte";
@@ -90,6 +91,11 @@
               selector={canvas.state.selector}
               matchText={canvas.state.matchText}
               {url}
+              onsave={() => canvas.clearSelection()}
+              {...router.props}
+            />
+          {:else if router.view === "editAlert"}
+            <EditAlert
               onsave={() => canvas.clearSelection()}
               {...router.props}
             />
