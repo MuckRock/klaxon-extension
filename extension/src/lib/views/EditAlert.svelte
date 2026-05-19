@@ -13,10 +13,12 @@
 
   interface Props {
     event: Event;
+    onselectorchange: (css: string) => Element | null;
+    onclearselection: () => void;
     onsave: () => void;
   }
 
-  let { event, onsave }: Props = $props();
+  let { event, onselectorchange, onclearselection, onsave }: Props = $props();
 
   let form: HTMLFormElement | undefined = $state();
 
@@ -27,6 +29,13 @@
 
   let frequency: AddOnSchedule = $derived(schedules[event.event] ?? "weekly");
   let saving = $state(false);
+
+  $effect(() => {
+    if (selector) onselectorchange(selector);
+    return () => {
+      onclearselection();
+    };
+  });
 
   async function handleSave() {
     saving = true;

@@ -60,7 +60,11 @@
   });
 
   function handleRouteChange(view: string) {
-    canvas.active = view === "createAlert";
+    canvas.active = [
+      "createAlert",
+      "editAlert"
+    ].includes(view);
+    canvas.editable = view !== "editAlert";
     loadData();
   }
 
@@ -96,6 +100,8 @@
             />
           {:else if router.view === "editAlert"}
             <EditAlert
+              onselectorchange={(css) => canvas.setSelector(css)}
+              onclearselection={() => canvas.clearSelection()}
               onsave={() => canvas.clearSelection()}
               {...router.props}
             />
