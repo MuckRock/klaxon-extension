@@ -19,6 +19,7 @@ export interface CanvasState {
 export interface Canvas {
   readonly state: CanvasState;
   active: boolean;
+  editable: boolean;
   clearSelection(): void;
   setSelector(css: string): Element | null;
   destroy(): void;
@@ -38,6 +39,7 @@ export function initCanvas(
   sidebarWidth: number,
 ): Canvas {
   let active = $state(false);
+  let editable = $state(true);
   let mouse = $state({ x: 0, y: 0 });
   let selector = $state("");
   let matchText = $state("");
@@ -158,6 +160,11 @@ export function initCanvas(
     dimming.style.clipPath = clipPathCutout(el);
     dimming.style.display = "block";
 
+    if (!editable) {
+      dismissBtn.style.display = "none";
+      return;
+    }
+
     // Position dismiss button at top-right of selection, clamped to viewport
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
@@ -207,6 +214,7 @@ export function initCanvas(
   }
 
   function showApertureBar(el: Element) {
+    if (!editable) return;
     apertureTarget = el;
   }
 
@@ -391,6 +399,22 @@ export function initCanvas(
     },
     set active(v: boolean) {
       setActive(v);
+    },
+    get editable() {
+      return editable;
+    },
+    set editable(v: boolean) {
+      if (v === editable) return;
+      editable = v;
+      if (selectionEl) {
+        if (editable) {
+          showSelection(selectionEl);
+          showApertureBar(selectionEl);
+        } else {
+          dismissBtn.style.display = "none";
+          apertureTarget = null;
+        }
+      }
     },
     clearSelection,
     setSelector(css: string): Element | null {

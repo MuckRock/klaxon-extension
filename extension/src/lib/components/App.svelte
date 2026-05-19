@@ -64,6 +64,7 @@
       "createAlert",
       "editAlert"
     ].includes(view);
+    canvas.editable = view !== "editAlert";
     loadData();
   }
 
