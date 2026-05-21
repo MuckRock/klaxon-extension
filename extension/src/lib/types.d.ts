@@ -254,6 +254,11 @@ export interface Run {
   created_at: string;
   updated_at: string;
   credits_spent?: number;
+  data: {
+    compare?: string;
+    snapshot?: string;
+    timestamp?: string;
+  };
 }
 
 // https://api.www.documentcloud.org/api/addon_events/?expand=addon
@@ -263,7 +268,9 @@ export interface Event {
   user: number;
   parameters: KlaxonParams;
   event: number;
-  scratch: unknown;
+  scratch: {
+    timestamp?: string;
+  };
   created_at: string;
   updated_at: string;
 }

@@ -60,10 +60,7 @@
   });
 
   function handleRouteChange(view: string) {
-    canvas.active = [
-      "createAlert",
-      "editAlert"
-    ].includes(view);
+    canvas.active = ["createAlert", "editAlert"].includes(view);
     canvas.editable = view !== "editAlert";
     loadData();
   }
@@ -72,7 +69,7 @@
 </script>
 
 <Toaster>
-  <Router initialView="listAlerts" onchange={handleRouteChange}>
+  <Router currentView="listAlerts" onchange={handleRouteChange}>
     {#snippet children(router)}
       <div class="sidebar">
         <Header {onclose} />

@@ -68,7 +68,11 @@
                   <span class="changed">
                     Changed: <RelativeTime date={new Date(run.updated_at)} />
                   </span>
-                  <button class="view-changes">View changes</button>
+                  {#if run.data.compare}
+                    <a class="view-changes" href={run.data.compare}>
+                      View changes
+                    </a>
+                  {/if}
                 </div>
               </div>
             {/each}

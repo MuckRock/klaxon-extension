@@ -1,13 +1,19 @@
 <script module>
-  import { createContext } from "svelte";
+  import { type Component, createContext } from "svelte";
 
   // To add a new view to the router,
   // register it within the View type.
-  type View = "listAlerts" | "createAlert" | "saveAlert" | "editAlert";
+  type View =
+    | "createAlert"
+    | "editAlert"
+    | "listAlerts"
+    | "saveAlert"
+    | "viewAlert";
 
   interface Router {
     view: View;
     props: any; // pass props to view components
+    views: Partial<Record<View, Component>>; // set this up in App.svelte
     navigate(v: View, props?: any): void;
   }
 
@@ -15,17 +21,15 @@
 </script>
 
 <script lang="ts">
-  import { type Snippet, untrack } from "svelte";
+  import type { Snippet } from "svelte";
 
   interface Props {
-    initialView: View;
+    currentView: View;
     onchange?: (view: View) => void;
     children: Snippet<[Router]>;
   }
 
-  let { initialView, onchange, children }: Props = $props();
-
-  let currentView = $state<View>(untrack(() => initialView));
+  let { currentView, onchange, children }: Props = $props();
 
   const router: Router = {
     props: {},
@@ -38,6 +42,8 @@
       currentView = v;
       onchange?.(v);
     },
+
+    views: {},
   };
 
   setRouter(router);
