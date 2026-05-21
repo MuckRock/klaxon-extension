@@ -54,7 +54,7 @@
 
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate("listAlerts");
+    router.navigate("listChanges");
   }
 </script>
 

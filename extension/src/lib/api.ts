@@ -25,6 +25,7 @@ import { getApiResponse } from "./utils";
 
 const API_URL = import.meta.env.MUCKROCK_DOCUMENTCLOUD_API;
 const KLAXON_ID = import.meta.env.MUCKROCK_KLAXON_ID; // this will change between environments
+const CHANGED = "Change detected";
 
 /**
  * Route fetch through the service worker to avoid CORS restrictions.
@@ -97,6 +98,7 @@ export async function history(
     `addon_runs/?expand=addon,event&addon=${KLAXON_ID}`,
     API_URL,
   );
+  endpoint.searchParams.set("message", CHANGED); // filter out noop runs
   endpoint.searchParams.set("site", site);
   if (params.cursor) {
     endpoint.searchParams.set("cursor", params.cursor);

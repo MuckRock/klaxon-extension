@@ -63,7 +63,7 @@
 
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate("listAlerts");
+    router.navigate("listChanges");
   }
 </script>
 
@@ -79,7 +79,7 @@
     <button
       class="back-link"
       type="button"
-      onclick={() => router.navigate("listAlerts")}
+      onclick={() => router.navigate("listChanges")}
     >
       &#8249; <span>Back</span>
     </button>

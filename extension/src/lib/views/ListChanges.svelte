@@ -19,7 +19,8 @@
 
   const router = getRouter();
 
-  const isEmpty = $derived(events.results.length === 0);
+  let hasEvents = $derived(events.results.length > 0);
+  let hasRuns = $derived(runs.results.length > 0);
 
   function getSiteLabel(run: Run): string {
     const event = run.event;
@@ -37,7 +38,7 @@
 <div class="container list-alerts">
   <main class="section">
     <Welcome>
-      {#if isEmpty}
+      {#if !hasEvents}
         <div class="empty-state">
           <p class="empty-message">You don't have any alerts for this page.</p>
         </div>
@@ -49,27 +50,49 @@
                 ? ""
                 : "s"}
             </strong>
-            for this page. Here are the most recent changes:
+            for this page.
           </p>
+          {#if hasRuns}
+            <p>Here are the most recent changes:</p>
+          {:else}
+            <p>No changes have been recorded yet. Check back later.</p>
+          {/if}
 
           <div class="table">
             {#each recentRuns as run (run.uuid)}
               <div class="table-row">
                 <p class="row-title">
-                  <button
+                  {#if run.data.snapshot}
+                    <a
+                      href={run.data.snapshot}
+                      class="link"
+                      target="_blank"
+                      rel="nooopener noreferer"
+                    >
+                      {getSiteLabel(run)}
+                    </a>
+                  {:else}
+                    <strong>{getSiteLabel(run)}</strong>
+                  {/if}
+                  <!-- <button
                     class="link"
                     onclick={() =>
                       router.navigate("editAlert", { event: run.event })}
                   >
                     {getSiteLabel(run)}
-                  </button>
+                  </button> -->
                 </p>
                 <div class="row-meta">
                   <span class="changed">
-                    Changed: <RelativeTime date={new Date(run.updated_at)} />
+                    Changed: <RelativeTime date={new Date(run.created_at)} />
                   </span>
                   {#if run.data.compare}
-                    <a class="view-changes" href={run.data.compare}>
+                    <a
+                      class="view-changes"
+                      href={run.data.compare}
+                      target="_blank"
+                      rel="noopener noreferer"
+                    >
                       View changes
                     </a>
                   {/if}
@@ -148,6 +171,11 @@
   }
 
   .summary strong {
+    color: #c41a4d;
+  }
+
+  .row-title a,
+  .row-title strong {
     color: #c41a4d;
   }
 

@@ -55,7 +55,7 @@
       class="back-link"
       onclick={() => {
         onclearselection();
-        router.navigate("listAlerts");
+        router.navigate("listChanges");
       }}
     >
       &#8249; <span>Back</span>

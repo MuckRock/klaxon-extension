@@ -6,7 +6,7 @@
   import CreateAlert from "../views/CreateAlert.svelte";
   import EditAlert from "../views/EditAlert.svelte";
   import Header from "./Header.svelte";
-  import ListAlerts from "../views/ListAlerts.svelte";
+  import ListChanges from "../views/ListChanges.svelte";
   import Router from "./Router.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
   import Toaster from "./Toaster.svelte";
@@ -69,15 +69,15 @@
 </script>
 
 <Toaster>
-  <Router currentView="listAlerts" onchange={handleRouteChange}>
+  <Router currentView="listChanges" onchange={handleRouteChange}>
     {#snippet children(router)}
       <div class="sidebar">
         <Header {onclose} />
 
         <div class="body">
           <ToastList />
-          {#if router.view === "listAlerts"}
-            <ListAlerts {events} {runs} {...router.props} />
+          {#if router.view === "listChanges"}
+            <ListChanges {events} {runs} {...router.props} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               locked={canvas.state.locked}

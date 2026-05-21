@@ -66,7 +66,7 @@ Pure DOM → structured-selector logic, no Svelte. Builds `StructuredSelector` (
 - `Toaster.svelte` / `ToastList.svelte` — same context pattern, `getToaster()` returns `{ success, error, dismiss }`. Errors are sticky; successes auto-dismiss after 5s.
 - `ApertureBar.svelte` — ancestor-walker UI for the picker (driven by `canvas.state`).
 - `RelativeTime.svelte` — small helper for human-readable timestamps.
-- Views in `src/lib/views/` (`ListAlerts`, `CreateAlert`, `SaveAlert`).
+- Views in `src/lib/views/` (`listChanges`, `CreateAlert`, `SaveAlert`).
 
 ### Auth (split between SW and sidebar)
 

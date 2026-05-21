@@ -6,7 +6,7 @@
   type View =
     | "createAlert"
     | "editAlert"
-    | "listAlerts"
+    | "listChanges"
     | "saveAlert"
     | "viewAlert";
 
