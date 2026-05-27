@@ -50,7 +50,7 @@
     margin: 8px 16px;
     padding: 10px 14px;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.25;
     color: #0c1e27;
   }

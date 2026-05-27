@@ -3,10 +3,11 @@
 
   // To add a new view to the router,
   // register it within the View type.
-  type View =
+  export type View =
     | "createAlert"
     | "editAlert"
     | "listChanges"
+    | "listAlerts"
     | "saveAlert"
     | "viewAlert";
 
@@ -29,7 +30,7 @@
     children: Snippet<[Router]>;
   }
 
-  let { currentView, onchange, children }: Props = $props();
+  let { currentView = $bindable(), onchange, children }: Props = $props();
 
   const router: Router = {
     props: {},

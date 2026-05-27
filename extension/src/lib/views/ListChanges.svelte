@@ -8,7 +8,7 @@
 
   import { getRouter } from "../components/Router.svelte";
 
-  import { isEvent } from "../utils";
+  import { isEvent, getSiteLabel } from "../utils";
 
   interface Props {
     events: Page<Event>;
@@ -22,20 +22,20 @@
   let hasEvents = $derived(events.results.length > 0);
   let hasRuns = $derived(runs.results.length > 0);
 
-  function getSiteLabel(run: Run): string {
+  function getLabel(run: Run): string {
     const event = run.event;
 
     if (!isEvent(event)) {
       return "Unknown site";
     }
 
-    return event.parameters.title || event.parameters.site;
+    return getSiteLabel(event);
   }
 
   const recentRuns = $derived(runs.results.slice(0, 6));
 </script>
 
-<div class="container list-alerts">
+<div class="container list-changes">
   <main class="section">
     <Welcome>
       {#if !hasEvents}
@@ -45,11 +45,14 @@
       {:else}
         <div class="alerts-body">
           <p class="summary">
-            You have <strong>
+            You have <button
+              class="link"
+              onclick={() => router.navigate("listAlerts")}
+            >
               {events.results.length} alert{events.results.length === 1
                 ? ""
                 : "s"}
-            </strong>
+            </button>
             for this page.
           </p>
           {#if hasRuns}
@@ -69,18 +72,11 @@
                       target="_blank"
                       rel="nooopener noreferer"
                     >
-                      {getSiteLabel(run)}
+                      {getLabel(run)}
                     </a>
                   {:else}
-                    <strong>{getSiteLabel(run)}</strong>
+                    <strong>{getLabel(run)}</strong>
                   {/if}
-                  <!-- <button
-                    class="link"
-                    onclick={() =>
-                      router.navigate("editAlert", { event: run.event })}
-                  >
-                    {getSiteLabel(run)}
-                  </button> -->
                 </p>
                 <div class="row-meta">
                   <span class="changed">
@@ -101,7 +97,10 @@
             {/each}
           </div>
 
-          <button class="view-all">
+          <button
+            class="view-all"
+            onclick={() => router.navigate("listAlerts")}
+          >
             View all your alerts for this page &#187;
           </button>
         </div>
@@ -152,7 +151,7 @@
 
   .empty-message {
     margin: 0 0 1em;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.3;
     color: #0c1e27;
   }
@@ -165,18 +164,14 @@
 
   .summary {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.3;
     color: #0c1e27;
   }
 
-  .summary strong {
-    color: #c41a4d;
-  }
-
   .row-title a,
   .row-title strong {
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
   }
 
   button.link {
@@ -187,14 +182,14 @@
     font-size: inherit;
     line-height: inherit;
     cursor: pointer;
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     text-decoration: underline;
     font-weight: bold;
   }
 
   .table {
     background: #fffefa;
-    border: 1px solid #d8dee2;
+    border: 1px solid var(--gray-2, #d8dee2);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -207,14 +202,14 @@
   }
 
   .table-row + .table-row {
-    border-top: 1px solid #d8dee2;
+    border-top: 1px solid var(--gray-2, #d8dee2);
   }
 
   .row-title {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     font-weight: 600;
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     text-decoration: underline;
     line-height: 1.3;
   }
@@ -233,7 +228,7 @@
   .view-changes {
     background: none;
     border: none;
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     font-size: 12px;
     cursor: pointer;
     text-decoration: underline;
@@ -243,8 +238,8 @@
   .view-all {
     background: none;
     border: none;
-    color: #c41a4d;
-    font-size: 14px;
+    color: var(--klaxon-color-link, #c41a4d);
+    font-size: var(--font-sm, 14px);
     font-weight: 700;
     cursor: pointer;
     text-align: left;

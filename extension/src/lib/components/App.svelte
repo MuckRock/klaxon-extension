@@ -6,6 +6,7 @@
   import CreateAlert from "../views/CreateAlert.svelte";
   import EditAlert from "../views/EditAlert.svelte";
   import Header from "./Header.svelte";
+  import ListAlerts from "../views/ListAlerts.svelte";
   import ListChanges from "../views/ListChanges.svelte";
   import Router from "./Router.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
@@ -78,6 +79,8 @@
           <ToastList />
           {#if router.view === "listChanges"}
             <ListChanges {events} {runs} {...router.props} />
+          {:else if router.view === "listAlerts"}
+            <ListAlerts {events} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               locked={canvas.state.locked}
@@ -110,6 +113,19 @@
 </Toaster>
 
 <style>
+  :host {
+    /* Klaxon design tokens. Defined on the shadow host so the whole
+       sidebar inherits them and host-page custom properties of the same
+       name can't leak in through the shadow boundary. */
+    --font-sm: 14px;
+    --font-md: 16px;
+    --font-lg: 20px;
+
+    --klaxon-color-link: #c41a4d;
+    --orange-2: #ffc2ba;
+    --gray-2: #d8dee2;
+  }
+
   .sidebar {
     position: fixed;
     top: 0;
@@ -120,7 +136,7 @@
     border-left: 2px solid #ccc;
     font-family:
       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     color: #333;
     z-index: 2147483647;
     display: flex;
@@ -173,8 +189,8 @@
   :global(.back-link) {
     background: none;
     border: none;
-    color: #c41a4d;
-    font-size: 14px;
+    color: var(--klaxon-color-link, #c41a4d);
+    font-size: var(--font-sm, 14px);
     font-weight: 700;
     cursor: pointer;
     text-align: left;

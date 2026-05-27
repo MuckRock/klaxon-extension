@@ -7,8 +7,9 @@
     ValidationError,
   } from "../types";
 
-  import { getRouter } from "../components/Router.svelte";
+  import BackLink from "../components/BackLink.svelte";
   import { getToaster } from "../components/Toaster.svelte";
+  import { getRouter } from "../components/Router.svelte";
   import { schedules, update } from "../api";
 
   interface Props {
@@ -75,15 +76,8 @@
     handleSave();
   }}
 >
-  <header>
-    <button
-      class="back-link"
-      type="button"
-      onclick={() => router.navigate("listChanges")}
-    >
-      &#8249; <span>Back</span>
-    </button>
-  </header>
+  <BackLink view="listChanges" />
+
   <main class="section content">
     <div class="intro">
       <h3>Edit alert</h3>
@@ -167,7 +161,6 @@
     height: 100%;
   }
 
-  header,
   main,
   footer {
     padding: 1em;
@@ -191,14 +184,14 @@
 
   h3 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--font-lg, 20px);
     font-weight: 700;
     color: #0c1e27;
   }
 
   .description {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.4;
     color: #0c1e27;
   }
@@ -215,7 +208,7 @@
   }
 
   .field-label {
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     font-weight: 700;
     color: #000;
     line-height: 1.4;
@@ -223,13 +216,13 @@
 
   .field-hint {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     line-height: 1.4;
     color: #0c1e27;
   }
 
   .field-hint a {
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     font-weight: 700;
     text-decoration: underline;
   }
@@ -245,7 +238,7 @@
     border: 1px solid #99a8b3;
     border-radius: 8px;
     padding: 6px 32px 6px 12px;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     color: #233944;
     font-family: inherit;
     box-shadow: 0px 2px 0px 0px #99a8b3;
@@ -260,12 +253,12 @@
     border: 1px solid #99a8b3;
     border-radius: 8px;
     padding: 6px 12px;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     font-family: inherit;
     color: #233944;
     background: white;
     box-sizing: border-box;
-    box-shadow: inset 0px 2px 0px 0px #d8dee2;
+    box-shadow: inset 0px 2px 0px 0px var(--gray-2, #d8dee2);
   }
 
   input::placeholder {
