@@ -117,13 +117,19 @@
     /* Klaxon design tokens. Defined on the shadow host so the whole
        sidebar inherits them and host-page custom properties of the same
        name can't leak in through the shadow boundary. */
+    --font-sans: "Source Sans Pro", sans-serif;
     --font-sm: 14px;
     --font-md: 16px;
     --font-lg: 20px;
 
     --klaxon-color-link: #c41a4d;
-    --orange-2: #ffc2ba;
+    --gray-1: #f5f6f7;
     --gray-2: #d8dee2;
+    --orange-2: #ffc2ba;
+    --orange-3: #ec7b6b;
+    --orange-4: #69515c;
+
+    --klaxon-border-radius: 0.5rem;
   }
 
   .sidebar {

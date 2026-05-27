@@ -3,6 +3,7 @@
 
   import { ArrowRight } from "@lucide/svelte";
 
+  import Link from "../components/Link.svelte";
   import RelativeTime from "../components/RelativeTime.svelte";
   import Welcome from "../components/Welcome.svelte";
 
@@ -45,14 +46,11 @@
       {:else}
         <div class="alerts-body">
           <p class="summary">
-            You have <button
-              class="link"
-              onclick={() => router.navigate("listAlerts")}
-            >
+            You have <Link view="listAlerts">
               {events.results.length} alert{events.results.length === 1
                 ? ""
                 : "s"}
-            </button>
+            </Link>
             for this page.
           </p>
           {#if hasRuns}
@@ -97,12 +95,9 @@
             {/each}
           </div>
 
-          <button
-            class="view-all"
-            onclick={() => router.navigate("listAlerts")}
-          >
+          <Link view="listAlerts">
             View all your alerts for this page &#187;
-          </button>
+          </Link>
         </div>
       {/if}
     </Welcome>
@@ -174,19 +169,6 @@
     color: var(--klaxon-color-link, #c41a4d);
   }
 
-  button.link {
-    border: none;
-    padding: 0;
-    background: none;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-    cursor: pointer;
-    color: var(--klaxon-color-link, #c41a4d);
-    text-decoration: underline;
-    font-weight: bold;
-  }
-
   .table {
     background: #fffefa;
     border: 1px solid var(--gray-2, #d8dee2);
@@ -207,6 +189,16 @@
 
   .row-title {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+
+    /* Clamp long URLs/titles to two lines, then ellipsis. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+
     font-size: var(--font-sm, 14px);
     font-weight: 600;
     color: var(--klaxon-color-link, #c41a4d);
@@ -235,14 +227,4 @@
     padding: 0;
   }
 
-  .view-all {
-    background: none;
-    border: none;
-    color: var(--klaxon-color-link, #c41a4d);
-    font-size: var(--font-sm, 14px);
-    font-weight: 700;
-    cursor: pointer;
-    text-align: left;
-    padding: 0;
-  }
 </style>

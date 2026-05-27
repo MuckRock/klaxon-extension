@@ -98,6 +98,7 @@
           <option value="hourly">Hourly</option>
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
+          <option value="disabled">Disable</option>
         </select>
       </div>
     </div>

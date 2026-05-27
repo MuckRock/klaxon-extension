@@ -195,7 +195,7 @@ export async function update(
   if (!token) {
     return { error: { status: 401, message: "Not authenticated" } };
   }
-  const endpoint = new URL(`addon_events/${event_id}/`, API_URL);
+  const endpoint = new URL(`addon_events/${event_id}/?expand=addon`, API_URL);
   const payload: AddOnPayload = {
     addon: +KLAXON_ID,
     event: eventValues[schedule],
