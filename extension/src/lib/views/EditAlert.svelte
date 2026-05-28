@@ -10,7 +10,7 @@
   import BackLink from "../components/BackLink.svelte";
   import { getToaster } from "../components/Toaster.svelte";
   import { getRouter } from "../components/Router.svelte";
-  import { schedules, update } from "../api";
+  import { eventValues, schedules, update } from "../api";
 
   interface Props {
     event: Event;
@@ -66,6 +66,27 @@
     toaster.success("Alert saved successfully!");
     router.navigate("listChanges");
   }
+
+  /**
+   * Reactivate this alert without navigating
+   */
+  async function reactivate() {
+    // optimistic update
+    event.event = eventValues.weekly;
+    const { data, error } = await update(event.id, "weekly", event.parameters);
+
+    if (error) {
+      console.error(error);
+      toaster.error(error.message);
+      event.event = eventValues.disabled; // revert
+      return;
+    }
+
+    if (data) {
+      event = data;
+      toaster.success("Alert reactivated");
+    }
+  }
 </script>
 
 <form
@@ -90,17 +111,24 @@
 
     <!-- schedule -->
     <div class="field">
-      <label class="field-label" for="frequency">
-        How often should Klaxon check this page?
-      </label>
-      <div class="select-wrapper">
-        <select id="frequency" bind:value={frequency} name="schedule">
-          <option value="hourly">Hourly</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="disabled">Disable</option>
-        </select>
-      </div>
+      {#if frequency === "disabled"}
+        <p class="description">This alert is currently disabled.</p>
+        <button type="button" class="reactivate" onclick={reactivate}>
+          Reactivate
+        </button>
+      {:else}
+        <label class="field-label" for="frequency">
+          How often should Klaxon check this page?
+        </label>
+        <div class="select-wrapper">
+          <select id="frequency" bind:value={frequency} name="schedule">
+            <option value="hourly">Hourly</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+      {/if}
     </div>
 
     <!-- title -->
@@ -230,6 +258,28 @@
 
   .select-wrapper {
     position: relative;
+  }
+
+  button.reactivate {
+    display: flex;
+    padding: 0.25rem 0.625rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--orange-4, #69515c);
+    background: var(--orange-3, #ec7b6b);
+
+    color: var(--gray-1, #f5f6f7);
+    text-align: center;
+    cursor: pointer;
+
+    /* Small Label */
+    font-family: var(--font-sans, "Source Sans Pro");
+    font-size: var(--font-sm, 14px);
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
   }
 
   select {

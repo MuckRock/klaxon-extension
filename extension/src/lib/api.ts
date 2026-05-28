@@ -72,7 +72,6 @@ export const schedules: AddOnSchedule[] = [
   "hourly",
   "daily",
   "weekly",
-  "upload",
 ];
 
 export const eventValues: Record<AddOnSchedule, number> = {
@@ -80,7 +79,6 @@ export const eventValues: Record<AddOnSchedule, number> = {
   hourly: 1,
   daily: 2,
   weekly: 3,
-  upload: 4,
 };
 
 /**

@@ -211,14 +211,11 @@ describe("dispatch", () => {
   });
 
   it("maps each schedule to its numeric event value", async () => {
-    const cases: Array<
-      ["disabled" | "hourly" | "daily" | "weekly" | "upload", number]
-    > = [
+    const cases: Array<["disabled" | "hourly" | "daily" | "weekly", number]> = [
       ["disabled", 0],
       ["hourly", 1],
       ["daily", 2],
       ["weekly", 3],
-      ["upload", 4],
     ];
 
     for (const [schedule, expected] of cases) {
