@@ -63,7 +63,7 @@
             {#each recentRuns as run (run.uuid)}
               <div class="table-row">
                 <p class="row-title">
-                  {#if run.data.snapshot}
+                  {#if run.data?.snapshot}
                     <a
                       href={run.data.snapshot}
                       class="link"
@@ -80,7 +80,7 @@
                   <span class="changed">
                     Changed: <RelativeTime date={new Date(run.created_at)} />
                   </span>
-                  {#if run.data.compare}
+                  {#if run.data?.compare}
                     <a
                       class="view-changes"
                       href={run.data.compare}
@@ -226,5 +226,4 @@
     text-decoration: underline;
     padding: 0;
   }
-
 </style>

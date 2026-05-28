@@ -254,7 +254,7 @@ export interface Run {
   created_at: string;
   updated_at: string;
   credits_spent?: number;
-  data: {
+  data?: {
     compare?: string;
     snapshot?: string;
     timestamp?: string;
