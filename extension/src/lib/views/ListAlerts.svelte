@@ -1,85 +1,116 @@
 <script lang="ts">
-  import type { Event, Page, Run } from "../types";
+  import type { Event, Page } from "../types";
 
   import { ArrowRight } from "@lucide/svelte";
 
+  import BackLink from "../components/BackLink.svelte";
+  import Link from "../components/Link.svelte";
   import RelativeTime from "../components/RelativeTime.svelte";
-  import Welcome from "../components/Welcome.svelte";
-
   import { getRouter } from "../components/Router.svelte";
-
-  import { isEvent } from "../utils";
+  import { getToaster } from "../components/Toaster.svelte";
+  import { schedules, update } from "../api";
+  import { getSiteLabel } from "../utils";
 
   interface Props {
     events: Page<Event>;
-    runs: Page<Run>;
   }
 
-  let { events, runs }: Props = $props();
+  let { events }: Props = $props();
 
   const router = getRouter();
+  const toaster = getToaster();
 
-  const isEmpty = $derived(events.results.length === 0);
+  let loading: boolean = $state(false);
+  let selected: Event[] = $state([]);
 
-  function getSiteLabel(run: Run): string {
-    const event = run.event;
+  let message: string = $derived.by(() => {
+    if (selected.length === 0) {
+      return "Select alerts to disable";
+    } else if (selected.length === 1) {
+      return "Disable 1 alert";
+    } else {
+      return `Disable ${selected.length} alerts`;
+    }
+  });
 
-    if (!isEvent(event)) {
-      return "Unknown site";
+  async function disable(toDisable: Event[]) {
+    loading = true;
+    const promises = toDisable.map((event) =>
+      update(event.id, "disabled", event.parameters),
+    );
+
+    const results = await Promise.all(promises);
+
+    // Write each updated event back into the rendered list.
+    results.forEach(({ data }) => {
+      if (data) {
+        const index = events.results.findIndex((e) => e.id === data.id);
+        if (index !== -1) {
+          events.results[index] = data;
+        }
+      }
+    });
+
+    const failures = results.filter((r) => r.error);
+    if (failures.length > 0) {
+      console.error(
+        "Disable alert(s) failed:",
+        failures.map((f) => f.error),
+      );
+      toaster.error(
+        failures.length === 1
+          ? (failures[0].error?.message ?? "Failed to disable 1 alert.")
+          : `Failed to disable ${failures.length} of ${toDisable.length} alerts.`,
+      );
+    } else {
+      toaster.success(
+        toDisable.length === 1
+          ? "Alert disabled."
+          : `${toDisable.length} alerts disabled.`,
+      );
     }
 
-    return event.parameters.title || event.parameters.site;
+    loading = false;
+    // Keep any failed alerts selected so the user can retry.
+    selected = toDisable.filter((_, i) => results[i].error);
   }
-
-  const recentRuns = $derived(runs.results.slice(0, 6));
 </script>
 
 <div class="container list-alerts">
+  <BackLink view="listChanges" />
+
   <main class="section">
-    <Welcome>
-      {#if isEmpty}
-        <div class="empty-state">
-          <p class="empty-message">You don't have any alerts for this page.</p>
-        </div>
-      {:else}
-        <div class="alerts-body">
-          <p class="summary">
-            You have <strong>
-              {events.results.length} alert{events.results.length === 1
-                ? ""
-                : "s"}
-            </strong>
-            for this page. Here are the most recent changes:
-          </p>
+    <h3>Your alerts</h3>
 
-          <div class="table">
-            {#each recentRuns as run (run.uuid)}
-              <div class="table-row">
-                <p class="row-title">
-                  <button
-                    class="link"
-                    onclick={() =>
-                      router.navigate("editAlert", { event: run.event })}
-                  >
-                    {getSiteLabel(run)}
-                  </button>
-                </p>
-                <div class="row-meta">
-                  <span class="changed">
-                    Changed: <RelativeTime date={new Date(run.updated_at)} />
-                  </span>
-                  <button class="view-changes">View changes</button>
-                </div>
-              </div>
-            {/each}
+    <button
+      type="button"
+      class="disable"
+      disabled={selected.length === 0 || loading}
+      onclick={() => disable(selected)}
+    >
+      {message}
+    </button>
+
+    <div class="alerts">
+      {#each events.results as event (event.id)}
+        <div class="event">
+          <div class="header">
+            <input type="checkbox" value={event} bind:group={selected} />
+            <h4><Link view="editAlert" {event}>{getSiteLabel(event)}</Link></h4>
           </div>
-
-          <button class="view-all">
-            View all your alerts for this page &#187;
-          </button>
+          <div class="body">
+            <dl>
+              <dt>Created</dt>
+              <dd>
+                <RelativeTime date={new Date(event.created_at)} />
+              </dd>
+              <dt>Alert status</dt>
+              <dd>{schedules[event.event]}</dd>
+            </dl>
+          </div>
         </div>
-      {/if}
-    </Welcome>
+      {/each}
+    </div>
   </main>
 
   <footer class="button-row">
@@ -93,8 +124,11 @@
 <style>
   .container {
     display: flex;
+    padding: var(--font-md, 16px) 0.75rem;
     flex-direction: column;
-    height: 100%;
+    gap: var(--font-lg, 20px);
+    border-bottom: 1px solid var(--orange-2, #ffc2ba);
+    background: #fffdf3;
   }
 
   main,
@@ -114,108 +148,114 @@
     flex: 1 1 auto;
   }
 
-  .empty-state {
-    flex: 1;
+  button.disable {
     display: flex;
-    flex-direction: column;
+    padding: 0.25rem 0.625rem;
     justify-content: center;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--orange-4, #69515c);
+    background: var(--orange-3, #ec7b6b);
+
+    color: var(--gray-1, #f5f6f7);
     text-align: center;
-    gap: 4px;
-  }
-
-  .empty-message {
-    margin: 0 0 1em;
-    font-size: 16px;
-    line-height: 1.3;
-    color: #0c1e27;
-  }
-
-  .alerts-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-  }
-
-  .summary {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.3;
-    color: #0c1e27;
-  }
-
-  .summary strong {
-    color: #c41a4d;
-  }
-
-  button.link {
-    border: none;
-    padding: 0;
-    background: none;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
     cursor: pointer;
-    color: #c41a4d;
-    text-decoration: underline;
-    font-weight: bold;
-  }
 
-  .table {
-    background: #fffefa;
-    border: 1px solid #d8dee2;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .table-row {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25em;
-    padding: 1em;
-  }
-
-  .table-row + .table-row {
-    border-top: 1px solid #d8dee2;
-  }
-
-  .row-title {
-    margin: 0;
-    font-size: 14px;
+    /* Small Label */
+    font-family: var(--font-sans, "Source Sans Pro");
+    font-size: var(--font-sm, 14px);
+    font-style: normal;
     font-weight: 600;
-    color: #c41a4d;
-    text-decoration: underline;
-    line-height: 1.3;
+    line-height: normal;
   }
 
-  .row-meta {
+  button.disable:disabled {
+    opacity: 0.5;
+  }
+
+  .alerts {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-size: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+    border-radius: var(--klaxon-border-radius, 0.5rem);
+    border: 1px solid var(--gray-2, #d8dee2);
+    background: #fffefa;
   }
 
-  .changed {
-    color: #233944;
-  }
+  .event {
+    display: flex;
+    padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+    align-self: stretch;
 
-  .view-changes {
-    background: none;
-    border: none;
-    color: #c41a4d;
-    font-size: 12px;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-  }
+    border-bottom: 1px solid var(--gray-2, #d8dee2);
 
-  .view-all {
-    background: none;
-    border: none;
-    color: #c41a4d;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    text-align: left;
-    padding: 0;
+    .header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      align-self: stretch;
+
+      input[type="checkbox"] {
+        display: flex;
+        padding-top: 0.25rem;
+        align-items: flex-start;
+        gap: 0.625rem;
+        align-self: stretch;
+      }
+
+      h4 {
+        flex: 1 0 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+
+        /* Clamp long URLs/titles to two lines, then ellipsis. */
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+
+        color: var(--klaxon-color-link, #c41a4d);
+        font-size: var(--font-md, 16px);
+        font-style: normal;
+        font-weight: 700;
+        line-height: 130%; /* 1.3rem */
+      }
+    }
+
+    .body {
+      display: flex;
+      padding-left: 2.125rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.375rem;
+      align-self: stretch;
+
+      dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-self: stretch;
+        column-gap: 0.5rem;
+        row-gap: 0.375rem;
+        margin: 0;
+      }
+
+      dt {
+        font-weight: bold;
+      }
+
+      dt::after {
+        content: ":";
+      }
+
+      dd {
+        margin: 0;
+      }
+    }
   }
 </style>

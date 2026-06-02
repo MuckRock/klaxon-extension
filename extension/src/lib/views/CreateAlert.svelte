@@ -1,5 +1,7 @@
 <script lang="ts">
   import { ArrowRight, ChevronRight } from "@lucide/svelte";
+
+  import BackLink from "../components/BackLink.svelte";
   import { getRouter } from "../components/Router.svelte";
 
   interface Props {
@@ -50,17 +52,7 @@
 </script>
 
 <div class="container create-alert">
-  <header>
-    <button
-      class="back-link"
-      onclick={() => {
-        onclearselection();
-        router.navigate("listAlerts");
-      }}
-    >
-      &#8249; <span>Back</span>
-    </button>
-  </header>
+  <BackLink view="listChanges" />
 
   <main class="section">
     <h3>Create an alert</h3>
@@ -231,9 +223,9 @@
         class="selector-panel-toggle"
         onclick={() => (selectorPanelOpen = !selectorPanelOpen)}
       >
-        <span class="toggle-arrow" class:open={selectorPanelOpen}
-          ><ChevronRight /></span
-        >
+        <span class="toggle-arrow" class:open={selectorPanelOpen}>
+          <ChevronRight />
+        </span>
         <div class="selector-panel-text">
           <span>Familiar with CSS?</span>
           <strong>Customize the selector</strong>
@@ -269,7 +261,6 @@
     height: 100%;
   }
 
-  header,
   main,
   footer {
     padding: 1em;
@@ -289,7 +280,7 @@
 
   h3 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--font-lg, 20px);
     font-weight: 600;
     color: #000;
     line-height: 1.2;
@@ -297,7 +288,7 @@
 
   .description {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     line-height: 1.4;
     color: #000;
   }
@@ -330,7 +321,7 @@
 
   .message-content {
     padding: 1em 0.5em;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.3;
     color: #000;
   }
@@ -376,7 +367,7 @@
 
   .selector-panel-text {
     flex: 1 1 auto;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.3;
     color: #233944;
   }
@@ -413,7 +404,7 @@
   .selector-error {
     margin: 0;
     font-size: 12px;
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     line-height: 1.3;
   }
 </style>

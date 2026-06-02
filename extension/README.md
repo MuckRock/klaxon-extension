@@ -1,20 +1,32 @@
 # Klaxon Browser Extension
 
-An evolution of the existing Klaxon bookmarklet, for the modern internet browser. Built with Svelte 5 and Vite, packaged as a Chrome Extension (Manifest V3).
+An evolution of the existing Klaxon bookmarklet, for the modern internet browser. Built with Svelte 5 and Vite, packaged as a Chrome/Firefox extension (Manifest V3).
 
 When activated, Klaxon injects a sidebar into the current page. Hover over elements to highlight them, click to lock a selection, and the sidebar displays the CSS selector and matched text.
 
 ## Development
 
 ```sh
-npm install
+npm ci
 cp .env.example .env    # fill in MUCKROCK_CLIENT_ID from Squarelet admin
-npm run dev             # builds to build/ with file watching
 ```
 
-Env vars (`MUCKROCK_*`) are baked into the bundle at build start — **restart
-`npm run dev` after editing `.env`**, since vite only reads env files once at
-startup and will otherwise keep rebuilding with stale values.
+Dev is two separate watch builds that both emit into `build/` (a content script and a service worker), so run them in two terminals:
+
+```sh
+npm run dev:content     # content script → build/content.js
+npm run dev:service     # service worker → build/background.js
+```
+
+Environment variables (`MUCKROCK_*`) are baked into the bundle at build start — **restart both watchers after editing `.env`**, since vite only reads env files once at startup and will otherwise keep rebuilding with stale values. After a rebuild, reload the extension at `chrome://extensions`.
+
+The two that need real values (the rest default to the dev environment in `.env.example`):
+
+- `MUCKROCK_CLIENT_ID` — Squarelet OIDC public client; sign-in throws without it.
+- `MUCKROCK_KLAXON_ID` — the Klaxon add-on's numeric ID in DocumentCloud; the API calls filter on it, and it changes between environments.
+
+`MUCKROCK_ACCOUNTS_HOST`, `MUCKROCK_DOCUMENTCLOUD_API`, and `MUCKROCK_SCOPES`
+already point at dev defaults. The client is public (PKCE), so there's no secret.
 
 ## Building
 
@@ -40,20 +52,24 @@ Sign-in uses the browser's `identity.launchWebAuthFlow`, which returns to a
 browser-generated URL that must be registered exactly on the Squarelet OIDC
 client (django-oidc-provider does exact-string matching).
 
-To get the URI:
+Both browsers derive the URL from the (pinned) extension ID, so both are
+stable across reloads, profiles, and machines — register **both** of these on
+the Squarelet client's `Redirect URIs` field (one per line, **including the
+trailing slash**). Run `npm run redirect-uris` to print them (it computes them
+from `static/manifest.json`):
 
-1. Load the extension (`chrome://extensions` → "Load unpacked" → `build/`).
-2. Click the blue **service worker** link on the extension card to open its
-   DevTools.
-3. In the console, look for `[klaxon] OAuth redirect URI:` logged on SW boot,
-   or run `chrome.identity.getRedirectURL()` — same result.
-4. Copy the full URL (e.g. `https://<extension-id>.chromiumapp.org/`,
-   **including the trailing slash**) into the Squarelet client's `Redirect
-URIs` field, one per line.
+```
+https://noigegfnnlepflfmiajbpdhpgjgmiikc.chromiumapp.org/
+https://42386841672e9751ac81498187b4242b2e7d8fde.extensions.allizom.org/
+```
 
-The extension ID is stable across reloads thanks to the `"key"` in
-`manifest.json`, so you only need to register once per client.
+- **Chrome** ID is pinned by the `"key"` in `manifest.json` (a SHA-256-derived
+  hash of the key).
+- **Firefox** uses `https://<SHA-1(gecko.id)>.extensions.allizom.org/`, where
+  `gecko.id` is `klaxon-cloud@muckrock.com` from
+  `browser_specific_settings`. This is stable _because_ `gecko.id` is set;
+  without it, a temporary install gets a random ID and thus a different URL.
 
-Firefox uses a per-profile UUID rather than the extension's `gecko.id`, so
-each dev install needs its own registration; see
-[plans/auth.md](../plans/auth.md) for the longer-term Firefox strategy.
+To confirm the values, load the extension and check `[klaxon] OAuth redirect
+URI:` logged on SW boot (or run `chrome.identity.getRedirectURL()` in the
+service worker console).

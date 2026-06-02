@@ -128,7 +128,7 @@
     color: #fff;
     font-family:
       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     pointer-events: auto;
     box-sizing: border-box;
     box-shadow: 0 2px 4px 0 rgba(35, 35, 35, 0.5);

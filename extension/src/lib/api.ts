@@ -25,6 +25,7 @@ import { getApiResponse } from "./utils";
 
 const API_URL = import.meta.env.MUCKROCK_DOCUMENTCLOUD_API;
 const KLAXON_ID = import.meta.env.MUCKROCK_KLAXON_ID; // this will change between environments
+const CHANGED = "Change detected";
 
 /**
  * Route fetch through the service worker to avoid CORS restrictions.
@@ -71,7 +72,6 @@ export const schedules: AddOnSchedule[] = [
   "hourly",
   "daily",
   "weekly",
-  "upload",
 ];
 
 export const eventValues: Record<AddOnSchedule, number> = {
@@ -79,7 +79,6 @@ export const eventValues: Record<AddOnSchedule, number> = {
   hourly: 1,
   daily: 2,
   weekly: 3,
-  upload: 4,
 };
 
 /**
@@ -97,6 +96,7 @@ export async function history(
     `addon_runs/?expand=addon,event&addon=${KLAXON_ID}`,
     API_URL,
   );
+  endpoint.searchParams.set("message", CHANGED); // filter out noop runs
   endpoint.searchParams.set("site", site);
   if (params.cursor) {
     endpoint.searchParams.set("cursor", params.cursor);
@@ -193,7 +193,7 @@ export async function update(
   if (!token) {
     return { error: { status: 401, message: "Not authenticated" } };
   }
-  const endpoint = new URL(`addon_events/${event_id}/`, API_URL);
+  const endpoint = new URL(`addon_events/${event_id}/?expand=addon`, API_URL);
   const payload: AddOnPayload = {
     addon: +KLAXON_ID,
     event: eventValues[schedule],

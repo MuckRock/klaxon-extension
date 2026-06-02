@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type Snippet } from "svelte";
+  import type { Snippet } from "svelte";
   import { authState } from "../auth.svelte.ts";
 
   interface Props {

@@ -7,6 +7,7 @@
   import EditAlert from "../views/EditAlert.svelte";
   import Header from "./Header.svelte";
   import ListAlerts from "../views/ListAlerts.svelte";
+  import ListChanges from "../views/ListChanges.svelte";
   import Router from "./Router.svelte";
   import SaveAlert from "../views/SaveAlert.svelte";
   import Toaster from "./Toaster.svelte";
@@ -60,10 +61,7 @@
   });
 
   function handleRouteChange(view: string) {
-    canvas.active = [
-      "createAlert",
-      "editAlert"
-    ].includes(view);
+    canvas.active = ["createAlert", "editAlert"].includes(view);
     canvas.editable = view !== "editAlert";
     loadData();
   }
@@ -72,15 +70,17 @@
 </script>
 
 <Toaster>
-  <Router initialView="listAlerts" onchange={handleRouteChange}>
+  <Router currentView="listChanges" onchange={handleRouteChange}>
     {#snippet children(router)}
       <div class="sidebar">
         <Header {onclose} />
 
         <div class="body">
           <ToastList />
-          {#if router.view === "listAlerts"}
-            <ListAlerts {events} {runs} {...router.props} />
+          {#if router.view === "listChanges"}
+            <ListChanges {events} {runs} {...router.props} />
+          {:else if router.view === "listAlerts"}
+            <ListAlerts {events} />
           {:else if router.view === "createAlert"}
             <CreateAlert
               locked={canvas.state.locked}
@@ -113,6 +113,25 @@
 </Toaster>
 
 <style>
+  :host {
+    /* Klaxon design tokens. Defined on the shadow host so the whole
+       sidebar inherits them and host-page custom properties of the same
+       name can't leak in through the shadow boundary. */
+    --font-sans: "Source Sans Pro", sans-serif;
+    --font-sm: 14px;
+    --font-md: 16px;
+    --font-lg: 20px;
+
+    --klaxon-color-link: #c41a4d;
+    --gray-1: #f5f6f7;
+    --gray-2: #d8dee2;
+    --orange-2: #ffc2ba;
+    --orange-3: #ec7b6b;
+    --orange-4: #69515c;
+
+    --klaxon-border-radius: 0.5rem;
+  }
+
   .sidebar {
     position: fixed;
     top: 0;
@@ -123,7 +142,7 @@
     border-left: 2px solid #ccc;
     font-family:
       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     color: #333;
     z-index: 2147483647;
     display: flex;
@@ -176,8 +195,8 @@
   :global(.back-link) {
     background: none;
     border: none;
-    color: #c41a4d;
-    font-size: 14px;
+    color: var(--klaxon-color-link, #c41a4d);
+    font-size: var(--font-sm, 14px);
     font-weight: 700;
     cursor: pointer;
     text-align: left;

@@ -7,9 +7,10 @@
     ValidationError,
   } from "../types";
 
-  import { getRouter } from "../components/Router.svelte";
+  import BackLink from "../components/BackLink.svelte";
   import { getToaster } from "../components/Toaster.svelte";
-  import { schedules, update } from "../api";
+  import { getRouter } from "../components/Router.svelte";
+  import { eventValues, schedules, update } from "../api";
 
   interface Props {
     event: Event;
@@ -63,7 +64,28 @@
 
     onsave();
     toaster.success("Alert saved successfully!");
-    router.navigate("listAlerts");
+    router.navigate("listChanges");
+  }
+
+  /**
+   * Reactivate this alert without navigating
+   */
+  async function reactivate() {
+    // optimistic update
+    event.event = eventValues.weekly;
+    const { data, error } = await update(event.id, "weekly", event.parameters);
+
+    if (error) {
+      console.error(error);
+      toaster.error(error.message);
+      event.event = eventValues.disabled; // revert
+      return;
+    }
+
+    if (data) {
+      event = data;
+      toaster.success("Alert reactivated");
+    }
   }
 </script>
 
@@ -75,15 +97,8 @@
     handleSave();
   }}
 >
-  <header>
-    <button
-      class="back-link"
-      type="button"
-      onclick={() => router.navigate("listAlerts")}
-    >
-      &#8249; <span>Back</span>
-    </button>
-  </header>
+  <BackLink view="listChanges" />
+
   <main class="section content">
     <div class="intro">
       <h3>Edit alert</h3>
@@ -96,16 +111,24 @@
 
     <!-- schedule -->
     <div class="field">
-      <label class="field-label" for="frequency">
-        How often should Klaxon check this page?
-      </label>
-      <div class="select-wrapper">
-        <select id="frequency" bind:value={frequency} name="schedule">
-          <option value="hourly">Hourly</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-        </select>
-      </div>
+      {#if frequency === "disabled"}
+        <p class="description">This alert is currently disabled.</p>
+        <button type="button" class="reactivate" onclick={reactivate}>
+          Reactivate
+        </button>
+      {:else}
+        <label class="field-label" for="frequency">
+          How often should Klaxon check this page?
+        </label>
+        <div class="select-wrapper">
+          <select id="frequency" bind:value={frequency} name="schedule">
+            <option value="hourly">Hourly</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+      {/if}
     </div>
 
     <!-- title -->
@@ -167,7 +190,6 @@
     height: 100%;
   }
 
-  header,
   main,
   footer {
     padding: 1em;
@@ -191,14 +213,14 @@
 
   h3 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--font-lg, 20px);
     font-weight: 700;
     color: #0c1e27;
   }
 
   .description {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     line-height: 1.4;
     color: #0c1e27;
   }
@@ -215,7 +237,7 @@
   }
 
   .field-label {
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     font-weight: 700;
     color: #000;
     line-height: 1.4;
@@ -223,19 +245,41 @@
 
   .field-hint {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     line-height: 1.4;
     color: #0c1e27;
   }
 
   .field-hint a {
-    color: #c41a4d;
+    color: var(--klaxon-color-link, #c41a4d);
     font-weight: 700;
     text-decoration: underline;
   }
 
   .select-wrapper {
     position: relative;
+  }
+
+  button.reactivate {
+    display: flex;
+    padding: 0.25rem 0.625rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--orange-4, #69515c);
+    background: var(--orange-3, #ec7b6b);
+
+    color: var(--gray-1, #f5f6f7);
+    text-align: center;
+    cursor: pointer;
+
+    /* Small Label */
+    font-family: var(--font-sans, "Source Sans Pro");
+    font-size: var(--font-sm, 14px);
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
   }
 
   select {
@@ -245,7 +289,7 @@
     border: 1px solid #99a8b3;
     border-radius: 8px;
     padding: 6px 32px 6px 12px;
-    font-size: 14px;
+    font-size: var(--font-sm, 14px);
     color: #233944;
     font-family: inherit;
     box-shadow: 0px 2px 0px 0px #99a8b3;
@@ -260,12 +304,12 @@
     border: 1px solid #99a8b3;
     border-radius: 8px;
     padding: 6px 12px;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     font-family: inherit;
     color: #233944;
     background: white;
     box-sizing: border-box;
-    box-shadow: inset 0px 2px 0px 0px #d8dee2;
+    box-shadow: inset 0px 2px 0px 0px var(--gray-2, #d8dee2);
   }
 
   input::placeholder {

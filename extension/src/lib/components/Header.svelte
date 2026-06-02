@@ -61,7 +61,7 @@
   }
   h2 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--font-md, 16px);
     font-weight: 600;
   }
 
